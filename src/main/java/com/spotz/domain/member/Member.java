@@ -40,6 +40,13 @@ public class Member {
     @Builder.Default
     private String provider = "LOCAL";
 
+    /*
+     * 작성일: 2026-06-05
+     * 작성시간: 15:05
+     */
+    @Column(name = "provider_id", length = 100)
+    private String providerId;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

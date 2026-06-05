@@ -8,13 +8,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -29,30 +29,28 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException {
         DefaultOAuth2User oAuth2User = (DefaultOAuth2User) authentication.getPrincipal();
-        String email = extractEmail(oAuth2User);
-        Member member = memberRepository.findByEmail(email).orElseThrow();
+
+        /* * [수정일: 2026-06-05, 15:35]
+         * 수정내용:
+         * 1. 이메일만으로 회원을 찾을 경우 발생할 수 있는 소셜 계정 간 충돌을 방지하기 위해,
+         * OAuth2AuthenticationToken을 사용하여 정확한 ProviderId와 RegistrationId로 회원을 조회하도록 수정.
+         */
+        String registrationId = ((OAuth2AuthenticationToken) authentication).getAuthorizedClientRegistrationId();
+        String providerId = getProviderId(oAuth2User, registrationId);
+
+        Member member = memberRepository.findByProviderAndProviderId(registrationId.toUpperCase(), providerId)
+                .orElseThrow(() -> new IllegalArgumentException("회원 정보를 찾을 수 없습니다."));
 
         String accessToken = jwtProvider.createAccessToken(member.getMemberId(), member.getEmail(), member.getRole());
         String refreshToken = jwtProvider.createRefreshToken(member.getMemberId());
 
-        redisTemplate.opsForValue().set(
-            "refresh:" + member.getMemberId(),
-            refreshToken,
-            Duration.ofMillis(1209600000L)
-        );
+        redisTemplate.opsForValue().set("refresh:" + member.getMemberId(), refreshToken, Duration.ofMillis(1209600000L));
 
-        // 💡 프론트 개발 서버 주소 → 운영 시 https://spotz.co.kr 로 변경
         response.sendRedirect("http://localhost:3000/oauth2/callback?accessToken=" + accessToken + "&refreshToken=" + refreshToken);
     }
 
-    private String extractEmail(DefaultOAuth2User user) {
-        Map<String, Object> attrs = user.getAttributes();
-        if (attrs.containsKey("kakao_account")) {
-            return (String) ((Map<?, ?>) attrs.get("kakao_account")).get("email");
-        }
-        if (attrs.containsKey("response")) {
-            return (String) ((Map<?, ?>) attrs.get("response")).get("email");
-        }
-        return (String) attrs.get("email");
+    private String getProviderId(DefaultOAuth2User user, String registrationId) {
+        if ("kakao".equals(registrationId)) return String.valueOf(user.getAttribute("id"));
+        return user.getAttribute("sub"); // 구글
     }
 }
