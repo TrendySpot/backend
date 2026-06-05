@@ -120,4 +120,23 @@ public class MemberService {
         member.setPassword(passwordEncoder.encode(req.getNewPassword()));
         redisTemplate.delete("pw:verified:" + req.getEmail());
     }
+
+    /*
+     * 작성일: 2026-06-05
+     * 작성시간: 15:02
+     */
+    @Transactional
+    public Member findOrCreateSocialMember(String email, String provider, String providerId, String nickname) {
+        return memberRepository.findByProviderAndProviderId(provider, providerId)
+                .orElseGet(() -> {
+                    return memberRepository.save(Member.builder()
+                            .email(email)
+                            .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                            .nickname(nickname)
+                            .provider(provider)
+                            .providerId(providerId)
+                            .role(Member.Role.ROLE_USER)
+                            .build());
+                });
+    }
 }
