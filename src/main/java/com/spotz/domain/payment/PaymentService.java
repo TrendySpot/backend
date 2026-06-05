@@ -46,7 +46,7 @@ public class PaymentService {
         // 5. 검증이 통과되면 엔티티 생성 및 DB 저장
         Payment payment = Payment.builder()
                 .ticket(ticket)
-                .portonePaymentId(portOnePaymentId)
+                .portonePaymentId(portonePaymentId)
                 .merchantUid(merchantUid)
                 .amount(portOnePayment.amount().total())
                 .status("PAID")
