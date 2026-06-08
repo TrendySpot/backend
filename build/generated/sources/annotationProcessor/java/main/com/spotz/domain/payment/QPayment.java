@@ -22,15 +22,15 @@ public class QPayment extends EntityPathBase<Payment> {
 
     public static final QPayment payment = new QPayment("payment");
 
-    public final NumberPath<Integer> amount = createNumber("amount", Integer.class);
-
-    public final StringPath impUid = createString("impUid");
+    public final NumberPath<Long> amount = createNumber("amount", Long.class);
 
     public final StringPath merchantUid = createString("merchantUid");
 
     public final DateTimePath<java.time.LocalDateTime> paidAt = createDateTime("paidAt", java.time.LocalDateTime.class);
 
     public final NumberPath<Long> paymentId = createNumber("paymentId", Long.class);
+
+    public final StringPath portonePaymentId = createString("portonePaymentId");
 
     public final StringPath status = createString("status");
 

@@ -26,6 +26,8 @@ public class QTicket extends EntityPathBase<Ticket> {
 
     public final com.spotz.domain.member.QMember member;
 
+    public final NumberPath<Long> price = createNumber("price", Long.class);
+
     public final com.spotz.domain.spot.QSpotSchedule schedule;
 
     public final EnumPath<Ticket.TicketStatus> status = createEnum("status", Ticket.TicketStatus.class);

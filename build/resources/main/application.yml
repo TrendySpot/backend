@@ -10,7 +10,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
@@ -20,8 +20,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: "temporary_email@gmail.com"
-    password: "temporary_password"
+    username: "goldbean4877@gmail.com"
+    password: "tiyl zuvn awmr sjmu"
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
@@ -36,8 +36,8 @@ spring:
       client:
         registration:
           kakao:
-            client-id: "temporary_kakao_client_id"
-            client-secret: "temporary_kakao_client_secret"
+            client-id: "cfa31b6478ab9bff104179e618d627ee"
+            client-secret: "jIlRfYUEt54E8hSKq9wLhNko8pR734CT"
             redirect-uri: "{baseUrl}/login/oauth2/code/kakao"
             authorization-grant-type: authorization_code
             scope: profile_nickname, account_email
@@ -72,17 +72,17 @@ aws:
   secret-key: "temporary_aws_secret_key"
 
 portone:
-  api-secret: "temporary_portone_api_key"
-  imp-key: "temporary_portone_api_secret"
+  api-secret: "test_sk_d26DlbXAaV0xQbpa7y1VqY50Q9RB"
+  imp-key: "test_sk_d26DlbXAaV0xQbpa7y1VqY50Q9RB"
 
 crawling:
-  popga-sitemap: "https://example.com/sitemap.xml"
+  popga-sitemap: https://popga.co.kr/sitemap.xml
   schedule: "0 0 6 * * *"         # 매일 새벽 6시
 
 public-api:
   tour:
-    base-url: "https://apis.data.go.kr/B551011/KorService1"
-    service-key: "temporary_mock_key_until_i_get_real_one"
+    base-url: https://apis.data.go.kr/B551011/KorService2
+    service-key: c979ffa6b36894e0412bed320bdb48e3666f9b839908242a5757b0dca1fa3de9
 
 springdoc:
   swagger-ui:

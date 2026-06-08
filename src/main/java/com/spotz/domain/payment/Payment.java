@@ -23,17 +23,17 @@ public class Payment {
     @JoinColumn(name = "ticket_id", nullable = false)
     private Ticket ticket;
 
-    @Column(name = "imp_uid", nullable = false, length = 100)
-    private String impUid;
+    @Column(name = "portone_payment_id", nullable = false, length = 100)
+    private String portonePaymentId;
 
     @Column(name = "merchant_uid", nullable = false, length = 100)
     private String merchantUid;
 
     @Column(nullable = false)
-    private Integer amount;
+    private Long amount;
 
-    @Column(nullable = false, length = 20)
     @Builder.Default
+    @Column(nullable = false, length = 20)
     private String status = "PAID";
 
     @CreationTimestamp

@@ -13,6 +13,7 @@ public class ReviewResponse {
     private String nickname;
     private String profileImage;
     private String content;
+    private Integer rating;
     private LocalDateTime createdAt;
 
     public static ReviewResponse from(Review r) {
@@ -22,6 +23,7 @@ public class ReviewResponse {
                 .nickname(r.getMember().getNickname())
                 .profileImage(r.getMember().getProfileImage())
                 .content(r.getContent())
+                .rating(r.getRating())
                 .createdAt(r.getCreatedAt())
                 .build();
     }

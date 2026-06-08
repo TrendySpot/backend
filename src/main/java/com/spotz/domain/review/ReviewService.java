@@ -32,7 +32,12 @@ public class ReviewService {
         Spot spot = spotRepository.findById(spotId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 스팟입니다."));
         return ReviewResponse.from(reviewRepository.save(
-            Review.builder().member(member).spot(spot).content(req.getContent()).build()
+            Review.builder()
+                .member(member)
+                .spot(spot)
+                .content(req.getContent())
+                .rating(req.getRating())
+                .build()
         ));
     }
 
@@ -53,6 +58,7 @@ public class ReviewService {
             throw new SecurityException("본인의 후기만 수정할 수 있습니다.");
 
         review.setContent(req.getContent());
+        review.setRating(req.getRating());
         review.setUpdatedAt(LocalDateTime.now());
         return ReviewResponse.from(review);
     }

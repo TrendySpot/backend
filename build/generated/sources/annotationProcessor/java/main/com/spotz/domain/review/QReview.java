@@ -28,9 +28,13 @@ public class QReview extends EntityPathBase<Review> {
 
     public final com.spotz.domain.member.QMember member;
 
+    public final NumberPath<Integer> rating = createNumber("rating", Integer.class);
+
     public final NumberPath<Long> reviewId = createNumber("reviewId", Long.class);
 
     public final com.spotz.domain.spot.QSpot spot;
+
+    public final DateTimePath<java.time.LocalDateTime> updatedAt = createDateTime("updatedAt", java.time.LocalDateTime.class);
 
     public QReview(String variable) {
         this(Review.class, forVariable(variable), INITS);
