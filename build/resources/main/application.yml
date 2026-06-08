@@ -73,7 +73,6 @@ aws:
 
 portone:
   api-secret: "test_sk_d26DlbXAaV0xQbpa7y1VqY50Q9RB"
-  imp-key: "test_sk_d26DlbXAaV0xQbpa7y1VqY50Q9RB"
 
 crawling:
   popga-sitemap: https://popga.co.kr/sitemap.xml

@@ -4,45 +4,23 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b144759b-ea61-4bbe-870a-76a05fa05028" name="변경" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    <list default="true" id="b5a17776-533e-435d-b846-42ce8d175d52" name="변경" comment="">
       <change beforePath="$PROJECT_DIR$/.gradle/9.0.0/executionHistory/executionHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.0.0/executionHistory/executionHistory.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/9.0.0/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.0.0/executionHistory/executionHistory.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/9.0.0/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.0.0/fileHashes/fileHashes.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/9.0.0/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.0.0/fileHashes/fileHashes.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/9.0.0/fileHashes/resourceHashesCache.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.0.0/fileHashes/resourceHashesCache.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/outputFiles.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/outputFiles.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/file-system.probe" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/file-system.probe" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/generated/sources/annotationProcessor/java/main/com/spotz/domain/payment/QPayment.java" beforeDir="false" afterPath="$PROJECT_DIR$/build/generated/sources/annotationProcessor/java/main/com/spotz/domain/payment/QPayment.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/generated/sources/annotationProcessor/java/main/com/spotz/domain/review/QReview.java" beforeDir="false" afterPath="$PROJECT_DIR$/build/generated/sources/annotationProcessor/java/main/com/spotz/domain/review/QReview.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/generated/sources/annotationProcessor/java/main/com/spotz/domain/ticket/QTicket.java" beforeDir="false" afterPath="$PROJECT_DIR$/build/generated/sources/annotationProcessor/java/main/com/spotz/domain/ticket/QTicket.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules/backend-1.main.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/reports/problems/problems-report.html" beforeDir="false" afterPath="$PROJECT_DIR$/build/reports/problems/problems-report.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/resources/main/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/build/resources/main/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/tmp/compileJava/compileTransaction/stash-dir/SecurityConfig.class.uniqueId0" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/build/tmp/compileJava/previous-compilation-data.bin" beforeDir="false" afterPath="$PROJECT_DIR$/build/tmp/compileJava/previous-compilation-data.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/config/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/admin/AdminDashboardController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/admin/AdminDashboardController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/crawling/CrawlingService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/crawling/CrawlingService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/member/LoginResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/member/LoginResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/member/Member.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/member/Member.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/member/MemberRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/member/MemberRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/member/MemberService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/member/MemberService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/payment/Payment.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/payment/Payment.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/payment/PaymentController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/payment/PaymentController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/payment/PaymentRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/payment/PaymentRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/payment/PaymentResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/payment/PaymentResponse.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/payment/PaymentService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/payment/PaymentService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/payment/PaymentVerifyRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/payment/PaymentVerifyRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/review/Review.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/review/Review.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/review/ReviewRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/review/ReviewRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/review/ReviewResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/review/ReviewResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/review/ReviewService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/review/ReviewService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/spot/MainEventSummaryDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/spot/MainEventSummaryDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/spot/SpotRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/spot/SpotRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/spot/SpotStatisticsRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/spot/SpotStatisticsRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/ticket/Ticket.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/ticket/Ticket.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/global/oauth/CustomOAuth2UserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/global/oauth/CustomOAuth2UserService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/global/oauth/OAuth2SuccessHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/global/oauth/OAuth2SuccessHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/application.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/spotz/domain/payment/PortOneService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/spotz/domain/payment/PortOneService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -61,17 +39,23 @@
   "customColor": "",
   "associatedIndex": 1
 }]]></component>
-  <component name="ProjectId" id="3Eq6W93FruY26PXRogLDWOquJ2F" />
+  <component name="ProjectId" id="3EqBj9BWcfbBrFCsuDf5D0GxbKA" />
   <component name="ProjectViewState">
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Gradle.backend 빌드.executor": "Run",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
+    "Spring Boot.SpotzApplication.executor": "Run",
     "git-widget-placeholder": "back-test/ohgeumbin",
-    "kotlin-language-version-configured": "true"
+    "kotlin-language-version-configured": "true",
+    "project.structure.last.edited": "모듈",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0"
   }
 }]]></component>
   <component name="RunManager">
@@ -104,11 +88,11 @@
   </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="디폴트 작업">
-      <changelist id="b144759b-ea61-4bbe-870a-76a05fa05028" name="변경" comment="" />
-      <created>1780893783488</created>
+      <changelist id="b5a17776-533e-435d-b846-42ce8d175d52" name="변경" comment="" />
+      <created>1780896352704</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1780893783488</updated>
+      <updated>1780896352704</updated>
     </task>
     <servers />
   </component>
