@@ -9,7 +9,8 @@ public class PortOneService {
 
     private final RestClient restClient;
 
-    @Value("${portone.api-secret}")
+    // application.yml 또는 properties에 등록한 secret 키를 가져옵니다.
+    @Value("${portone.api.secret}")
     private String apiSecret;
 
     public PortOneService() {
@@ -24,17 +25,18 @@ public class PortOneService {
     public PortOnePaymentResponse getPaymentInfo(String portonePaymentId) {
         return restClient.get()
                 .uri("/payments/{paymentId}", portonePaymentId)
-                .header("Authorization", "PortOne " + apiSecret)
+                .header("Authorization", "PortOne " + apiSecret) // 인증 헤더 설정
                 .retrieve()
-                .body(PortOnePaymentResponse.class);
+                .body(PortOnePaymentResponse.class); // 응답을 DTO로 파싱
     }
 }
 
+// 포트원 API 응답을 매핑하기 위한 레코드(DTO)
 record PortOnePaymentResponse(
         String id,
         String merchantUid,
         Amount amount,
         String status
 ) {
-    record Amount(Long total) {}
+    record Amount(Integer total) {}
 }

@@ -32,12 +32,13 @@ public class PaymentService {
             throw new IllegalStateException("결제가 완료되지 않은 주문입니다. 상태: " + portOnePayment.status());
         }
 
-        // 4. 금액 위변조 검증 (Ticket.price = Long, PortOne amount.total = Long으로 통일)
+        // 4. 금액 위변조 검증 (★가장 중요: 프론트엔드 조작 방지)
+        // 만약 Ticket 엔티티의 가격 필드명이 다르면 수정해 주세요 (예: ticket.getAmount())
         if (!ticket.getPrice().equals(portOnePayment.amount().total())) {
             throw new IllegalStateException("결제 금액이 일치하지 않습니다. 위변조 가능성이 있습니다.");
         }
 
-        // 5. 검증 통과 후 엔티티 생성 및 DB 저장
+        // 5. 검증이 통과되면 엔티티 생성 및 DB 저장
         Payment payment = Payment.builder()
                 .ticket(ticket)
                 .portonePaymentId(portonePaymentId)
@@ -48,6 +49,7 @@ public class PaymentService {
 
         Payment savedPayment = paymentRepository.save(payment);
 
+        // 6. 수정하신 DTO 포맷으로 결과 반환
         return PaymentResponse.from(savedPayment);
     }
 }
