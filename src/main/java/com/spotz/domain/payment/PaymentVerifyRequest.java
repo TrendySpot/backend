@@ -1,23 +1,27 @@
 package com.spotz.domain.payment;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
-@Getter @Setter // 가급적 요청 DTO도 @Data보다는 @Getter, @Setter 구체화가 안전합니다.
+@Getter @Setter
 public class PaymentVerifyRequest {
 
-    @NotNull(message = "티켓 ID는 필수입니다.")
-    private Long ticketId;
+    // 결제 후 티켓 생성에 필요한 정보
+    @NotNull(message = "스케줄 ID는 필수입니다.")
+    private Long scheduleId;
 
-    // impUid 대신 포트원 V2 명칭인 portonePaymentId로 변경합니다.
+    @Min(value = 1, message = "인원은 1명 이상이어야 합니다.")
+    private int ticketCount;
+
+    // 포트원 결제 정보
     @NotBlank(message = "포트원 결제 ID는 필수입니다.")
     private String portonePaymentId;
 
-    @NotBlank(message = "가맹점 주문 번호는 필수입니다.")
     private String merchantUid;
 
     @NotNull(message = "결제 금액은 필수입니다.")
-    private Integer amount;
+    private Long amount;
 }

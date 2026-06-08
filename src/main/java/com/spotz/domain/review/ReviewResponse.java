@@ -13,7 +13,6 @@ public class ReviewResponse {
     private String nickname;
     private String profileImage;
     private String content;
-    private Integer rating;
     private LocalDateTime createdAt;
 
     public static ReviewResponse from(Review r) {
