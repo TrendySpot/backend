@@ -23,7 +23,6 @@ public class ReviewResponse {
                 .nickname(r.getMember().getNickname())
                 .profileImage(r.getMember().getProfileImage())
                 .content(r.getContent())
-                .rating(r.getRating())
                 .createdAt(r.getCreatedAt())
                 .build();
     }

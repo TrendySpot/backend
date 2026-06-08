@@ -36,7 +36,6 @@ public class ReviewService {
                 .member(member)
                 .spot(spot)
                 .content(req.getContent())
-                .rating(req.getRating())
                 .build()
         ));
     }
@@ -58,7 +57,6 @@ public class ReviewService {
             throw new SecurityException("본인의 후기만 수정할 수 있습니다.");
 
         review.setContent(req.getContent());
-        review.setRating(req.getRating());
         review.setUpdatedAt(LocalDateTime.now());
         return ReviewResponse.from(review);
     }
