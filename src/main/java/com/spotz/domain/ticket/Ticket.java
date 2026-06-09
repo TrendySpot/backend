@@ -31,6 +31,9 @@ public class Ticket {
     @Column(name = "ticket_count", nullable = false)
     private Integer ticketCount;
 
+    @Column(name = "price", nullable = false)
+    private Long price;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default

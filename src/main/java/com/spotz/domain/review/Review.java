@@ -3,6 +3,8 @@ package com.spotz.domain.review;
 import com.spotz.domain.member.Member;
 import com.spotz.domain.spot.Spot;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 

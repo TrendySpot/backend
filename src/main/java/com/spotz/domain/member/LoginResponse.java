@@ -10,4 +10,6 @@ public class LoginResponse {
     private String refreshToken;
     private String nickname;
     private String role;
+    private Long memberId;
+    private String email;
 }

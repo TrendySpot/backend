@@ -12,13 +12,13 @@ public class MainEventSummaryDto {
 	private String site;
 	private String period;
 
-	// 외부 API 데이터를 MainEventSummaryDto로 변환하는 static 메서드
-	public static MainEventSummaryDto from(EventResponse apiData) {
-		return MainEventSummaryDto.builder()
-				.title(apiData.getTitle())
-				.imageUrl(apiData.getImageUrl())
-				.site(apiData.getEventSite())
-				.period(apiData.getPeriod())
-				.build();
-	}
+//	// 외부 API 데이터를 MainEventSummaryDto로 변환하는 static 메서드
+//	public static MainEventSummaryDto from(EventResponse apiData) {
+//		return MainEventSummaryDto.builder()
+//				.title(apiData.getTitle())
+//				.imageUrl(apiData.getImageUrl())
+//				.site(apiData.getEventSite())
+//				.period(apiData.getPeriod())
+//				.build();
+//	}
 }
