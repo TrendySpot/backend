@@ -1,87 +1,101 @@
 package com.spotz.domain.payment;
 
+import com.spotz.domain.member.Member;
+import com.spotz.domain.member.MemberRepository;
+import com.spotz.domain.spot.SpotSchedule;
+import com.spotz.domain.spot.SpotScheduleRepository;
 import com.spotz.domain.ticket.Ticket;
 import com.spotz.domain.ticket.TicketRepository;
+import com.spotz.global.websocket.TicketStatusMessage;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
-
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final TicketRepository ticketRepository;
-    private final RestTemplate restTemplate;
+    private final MemberRepository memberRepository;
+    private final SpotScheduleRepository scheduleRepository;
+    private final PortOneService portOneService;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    @Value("${portone.imp-key}")
-    private String impKey;
+    public PaymentResponse verifyAndSavePayment(Long memberId, PaymentVerifyRequest req) {
 
-    @Value("${portone.api-secret}")
-    private String apiSecret;
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
 
-    @Transactional
-    public PaymentResponse verifyAndSave(Long memberId, PaymentVerifyRequest req) {
+        SpotSchedule schedule = scheduleRepository.findByIdWithLock(req.getScheduleId())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 스케줄입니다."));
 
-        // 포트원 서버 검증 건너뜀 → 요청 금액 그대로 사용
-        // 프론트 개발 완료 후 아래 주석 지울 것
+        Long spotPrice = schedule.getSpot().getPrice() != null ? schedule.getSpot().getPrice() : 0L;
+        Long totalPrice = spotPrice * req.getTicketCount();
 
-        /*
-        // 1. 포트원 액세스 토큰 발급
-        String accessToken = getPortoneToken();
+        // 무료 결제 처리
+        if ("FREE".equals(req.getPortonePaymentId()) || totalPrice == 0L) {
+            schedule.decreaseTickets(req.getTicketCount());
+            Ticket ticket = Ticket.builder()
+                    .member(member).schedule(schedule)
+                    .ticketCount(req.getTicketCount())
+                    .price(0L).build();
+            ticketRepository.save(ticket);
+            broadcastTicketStatus(schedule);
 
-        // 2. 포트원에서 결제 정보 조회
-        Map<String, Object> paymentData = getPaymentFromPortone(req.getImpUid(), accessToken);
-        Integer paidAmount = (Integer) ((Map<?, ?>) paymentData.get("response")).get("amount");
-
-        // 3. 금액 검증
-        if (!paidAmount.equals(req.getAmount())) {
-            throw new IllegalStateException("결제 금액이 일치하지 않습니다.");
+            Payment payment = Payment.builder()
+                    .ticket(ticket)
+                    .portonePaymentId("FREE")
+                    .merchantUid(req.getMerchantUid() != null ? req.getMerchantUid() : "FREE_" + System.currentTimeMillis())
+                    .amount(0L)
+                    .status("FREE")
+                    .build();
+            return PaymentResponse.from(paymentRepository.save(payment));
         }
-        */
 
-        // 개발용 임시 추가, 프론트에서 보내준 결제 금액을 검증 없이 그대로 믿고 사용합니다.
-        Integer paidAmount = req.getAmount();
+        // 포트원 V2 결제 검증
+        PortOnePaymentResponse portOnePayment = portOneService.getPaymentInfo(req.getPortonePaymentId());
 
-        // 4. 티켓 조회 및 본인 확인 (이 부분은 서비스 검증용이므로 그대로 둡니다)
-        Ticket ticket = ticketRepository.findWithScheduleAndSpot(req.getTicketId())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 티켓입니다."));
-        if (!ticket.getMember().getMemberId().equals(memberId))
-            throw new SecurityException("본인의 티켓만 결제할 수 있습니다.");
+        if (!"PAID".equals(portOnePayment.status())) {
+            throw new IllegalStateException("결제가 완료되지 않은 주문입니다. 상태: " + portOnePayment.status());
+        }
+
+        if (!totalPrice.equals((long) portOnePayment.amount().total())) {
+            throw new IllegalStateException("결제 금액이 일치하지 않습니다. 위변조 가능성이 있습니다.");
+        }
+
+        // 결제 검증 완료 후 티켓 생성
+        schedule.decreaseTickets(req.getTicketCount());
+        Ticket ticket = Ticket.builder()
+                .member(member).schedule(schedule)
+                .ticketCount(req.getTicketCount())
+                .price(totalPrice).build();
+        ticketRepository.save(ticket);
+        broadcastTicketStatus(schedule);
 
         Payment payment = Payment.builder()
-                .ticket(ticket).impUid(req.getImpUid())
-                .merchantUid(req.getMerchantUid()).amount(paidAmount)
+                .ticket(ticket)
+                .portonePaymentId(req.getPortonePaymentId())
+                .merchantUid(req.getMerchantUid())
+                .amount((long) portOnePayment.amount().total())
+                .status("PAID")
                 .build();
-        paymentRepository.save(payment);
-        return PaymentResponse.from(payment);
+
+        return PaymentResponse.from(paymentRepository.save(payment));
     }
 
-    private String getPortoneToken() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        Map<String, String> body = Map.of("imp_key", impKey, "imp_secret", apiSecret);
-        ResponseEntity<Map> response = restTemplate.postForEntity(
-            "https://api.iamport.kr/users/getToken",
-            new HttpEntity<>(body, headers), Map.class
+    private void broadcastTicketStatus(SpotSchedule schedule) {
+        messagingTemplate.convertAndSend(
+            "/topic/tickets/" + schedule.getSpot().getSpotId(),
+            TicketStatusMessage.builder()
+                .scheduleId(schedule.getScheduleId())
+                .spotId(schedule.getSpot().getSpotId())
+                .eventDate(schedule.getEventDate())
+                .totalTickets(schedule.getTotalTickets())
+                .remainedTickets(schedule.getRemainedTickets())
+                .build()
         );
-        return (String) ((Map<?, ?>) response.getBody().get("response")).get("access_token");
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> getPaymentFromPortone(String impUid, String token) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(token);
-        ResponseEntity<Map> response = restTemplate.exchange(
-            "https://api.iamport.kr/payments/" + impUid,
-            HttpMethod.GET, new HttpEntity<>(headers), Map.class
-        );
-        return response.getBody();
     }
 }

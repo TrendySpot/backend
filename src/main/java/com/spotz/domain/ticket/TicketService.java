@@ -31,9 +31,14 @@ public class TicketService {
 
         schedule.decreaseTickets(req.getTicketCount());
 
+        Long price = schedule.getSpot().getPrice() != null
+                ? schedule.getSpot().getPrice() * req.getTicketCount()
+                : 0L;
+
         Ticket ticket = Ticket.builder()
                 .member(member).schedule(schedule)
-                .ticketCount(req.getTicketCount()).build();
+                .ticketCount(req.getTicketCount())
+                .price(price).build();
         ticketRepository.save(ticket);
 
         broadcastTicketStatus(schedule);

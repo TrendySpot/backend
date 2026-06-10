@@ -32,7 +32,11 @@ public class ReviewService {
         Spot spot = spotRepository.findById(spotId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 스팟입니다."));
         return ReviewResponse.from(reviewRepository.save(
-            Review.builder().member(member).spot(spot).content(req.getContent()).build()
+            Review.builder()
+                .member(member)
+                .spot(spot)
+                .content(req.getContent())
+                .build()
         ));
     }
 
