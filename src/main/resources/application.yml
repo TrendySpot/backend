@@ -41,6 +41,7 @@ spring:
           kakao:
             client-id: ${KAKAO_CLIENT_ID}
             client-secret: ${KAKAO_CLIENT_SECRET}
+            client-authentication-method: client_secret_post # 💡 401 에러 방지를 위해 추가
             redirect-uri: "{baseUrl}/login/oauth2/code/kakao"
             authorization-grant-type: authorization_code
             scope: profile_nickname, account_email

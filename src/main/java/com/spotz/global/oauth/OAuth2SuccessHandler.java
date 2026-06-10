@@ -13,6 +13,8 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 
@@ -32,17 +34,26 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         String email = extractEmail(oAuth2User);
         Member member = memberRepository.findByEmail(email).orElseThrow();
 
-        String accessToken = jwtProvider.createAccessToken(member.getMemberId(), member.getEmail(), member.getRole());
+        String accessToken  = jwtProvider.createAccessToken(member.getMemberId(), member.getEmail(), member.getRole());
         String refreshToken = jwtProvider.createRefreshToken(member.getMemberId());
 
         redisTemplate.opsForValue().set(
-            "refresh:" + member.getMemberId(),
-            refreshToken,
-            Duration.ofMillis(1209600000L)
+                "refresh:" + member.getMemberId(),
+                refreshToken,
+                Duration.ofMillis(1209600000L)
         );
 
+        String encodedNickname = URLEncoder.encode(member.getNickname(), StandardCharsets.UTF_8);
+        String encodedEmail    = URLEncoder.encode(member.getEmail(),    StandardCharsets.UTF_8);
+
         // 💡 프론트 개발 서버 주소 → 운영 시 https://spotz.co.kr 로 변경
-        response.sendRedirect("http://localhost:3000/oauth2/callback?accessToken=" + accessToken + "&refreshToken=" + refreshToken);
+        response.sendRedirect("http://localhost:3000/oauth2/callback"
+                + "?accessToken="  + accessToken
+                + "&refreshToken=" + refreshToken
+                + "&nickname="     + encodedNickname
+                + "&role="         + member.getRole().name()
+                + "&memberId="     + member.getMemberId()
+                + "&email="        + encodedEmail);
     }
 
     private String extractEmail(DefaultOAuth2User user) {
