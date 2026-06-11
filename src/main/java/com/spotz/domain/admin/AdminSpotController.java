@@ -3,6 +3,10 @@ package com.spotz.domain.admin;
 import com.spotz.domain.spot.*;
 import com.spotz.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +19,12 @@ public class AdminSpotController {
 
     private final SpotRepository spotRepository;
     private final SpotScheduleRepository scheduleRepository;
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<Page<AdminSpotResponse>>> getSpots(
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.of(spotRepository.findAll(pageable).map(AdminSpotResponse::from)));
+    }
 
     @PostMapping
     public ResponseEntity<ApiResponse<Void>> createSpot(@RequestBody AdminSpotRequest req) {

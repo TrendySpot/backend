@@ -19,10 +19,6 @@ public interface SpotStatisticsRepository extends JpaRepository<SpotStatistics, 
 	// [06-05 10:56] spotId로 통계 조회
 	Optional<SpotStatistics> findBySpotId(Long spotId);
 
-	// [06-05 10:56] 평점 계산 (Review 테이블에서)
-	@Query("SELECT AVG(CAST(r.rating AS DOUBLE)) FROM Review r WHERE r.spot.spotId = :spotId")
-	Double getAverageRating(@Param("spotId") Long spotId);
-
 	// [06-05 10:56] 리뷰 개수 조회
 	@Query("SELECT COUNT(r) FROM Review r WHERE r.spot.spotId = :spotId")
 	Long getReviewCount(@Param("spotId") Long spotId);
@@ -39,11 +35,10 @@ public interface SpotStatisticsRepository extends JpaRepository<SpotStatistics, 
 	@Modifying
 	@Transactional
 	@Query(value = "UPDATE SPOT_STATISTICS s SET " +
-			"s.average_rating = (SELECT AVG(r.rating) FROM REVIEW r WHERE r.spot_id = s.spot_id), " +
-			"s.review_count = (SELECT COUNT(r.id) FROM REVIEW r WHERE r.spot_id = s.spot_id), " +
+			"s.review_count = (SELECT COUNT(r.review_id) FROM REVIEW r WHERE r.spot_id = s.spot_id), " +
 			"s.wish_count = (SELECT COUNT(w.wish_id) FROM WISHLIST w WHERE w.spot_id = s.spot_id), " +
 			"s.reserve_count = (SELECT COUNT(t.ticket_id) FROM TICKET t JOIN SPOT_SCHEDULE ss ON t.schedule_id = ss.schedule_id WHERE ss.spot_id = s.spot_id AND t.status = 'RESERVED'), " +
-			"s.updated_at = SYSTIMESTAMP " +
+			"s.updated_at = NOW() " +
 			"WHERE s.spot_id = :spotId",
 			nativeQuery = true)
 	void syncStatistics(@Param("spotId") Long spotId);

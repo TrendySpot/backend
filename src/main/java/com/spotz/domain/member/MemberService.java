@@ -45,7 +45,8 @@ public class MemberService {
         String accessToken = jwtProvider.createAccessToken(member.getMemberId(), member.getEmail(), member.getRole());
         String refreshToken = jwtProvider.createRefreshToken(member.getMemberId());
         redisTemplate.opsForValue().set("refresh:" + member.getMemberId(), refreshToken, Duration.ofMillis(1209600000L));
-        return new LoginResponse(accessToken, refreshToken, member.getNickname(), member.getRole().name());
+        return new LoginResponse(accessToken, refreshToken, member.getNickname(), member.getRole().name(),
+                member.getMemberId(), member.getEmail());
     }
 
     public TokenRefreshResponse refresh(String refreshToken) {
@@ -77,9 +78,23 @@ public class MemberService {
     @Transactional
     public void updateProfile(Long memberId, UpdateProfileRequest req) {
         Member member = memberRepository.findById(memberId).orElseThrow();
-        if (req.getNickname() != null) member.setNickname(req.getNickname());
-        if (req.getProfileImage() != null) member.setProfileImage(req.getProfileImage());
-        if (req.getPassword() != null) member.setPassword(passwordEncoder.encode(req.getPassword()));
+
+        // 1️⃣ 현재 비밀번호가 아예 안 넘어왔거나, DB에 암호화된 값과 다르면 컷트!
+        if (req.getCurrentPassword() == null ||
+                !passwordEncoder.matches(req.getCurrentPassword(), member.getPassword())) {
+            throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+        }
+
+        // 2️⃣ 현재 비밀번호가 맞았을 때만 아래 수정 로직들이 실행됨
+        if (req.getNickname() != null) {
+            member.setNickname(req.getNickname());
+        }
+        if (req.getProfileImage() != null) {
+            member.setProfileImage(req.getProfileImage());
+        }
+        if (req.getNewPassword() != null && !req.getNewPassword().isBlank()) {
+            member.setPassword(passwordEncoder.encode(req.getNewPassword()));
+        }
     }
 
     public FindEmailResponse findEmail(String nickname) {
@@ -119,24 +134,5 @@ public class MemberService {
         Member member = memberRepository.findByEmail(req.getEmail()).orElseThrow();
         member.setPassword(passwordEncoder.encode(req.getNewPassword()));
         redisTemplate.delete("pw:verified:" + req.getEmail());
-    }
-
-    /*
-     * 작성일: 2026-06-05
-     * 작성시간: 15:02
-     */
-    @Transactional
-    public Member findOrCreateSocialMember(String email, String provider, String providerId, String nickname) {
-        return memberRepository.findByProviderAndProviderId(provider, providerId)
-                .orElseGet(() -> {
-                    return memberRepository.save(Member.builder()
-                            .email(email)
-                            .password(passwordEncoder.encode(UUID.randomUUID().toString()))
-                            .nickname(nickname)
-                            .provider(provider)
-                            .providerId(providerId)
-                            .role(Member.Role.ROLE_USER)
-                            .build());
-                });
     }
 }

@@ -1,18 +1,20 @@
 package com.spotz.global.oauth;
 
-import com.spotz.domain.member.MemberService;
+import com.spotz.domain.member.Member;
+import com.spotz.domain.member.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
-    private final MemberService memberService;
+    private final MemberRepository memberRepository;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest request) {
@@ -21,27 +23,38 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         String email;
         String nickname;
-        String providerId;
 
-        /* * [수정일: 2026-06-05, 15:35]
-         * 수정내용:
-         * 1. 기존 네이버 중심의 하드코딩된 로직을 구글(Google) 로그인 지원을 위해 분기 처리함.
-         * 2. DB 저장 및 조회의 일관성을 위해 직접 리포지토리를 호출하지 않고 MemberService를 사용하도록 변경함.
-         */
         if ("kakao".equals(registrationId)) {
-            Map<?, ?> attributes = oAuth2User.getAttributes();
-            providerId = String.valueOf(attributes.get("id"));
-            Map<?, ?> kakaoAccount = (Map<?, ?>) attributes.get("kakao_account");
+            Map<?, ?> kakaoAccount = (Map<?, ?>) oAuth2User.getAttributes().get("kakao_account");
             Map<?, ?> profile = (Map<?, ?>) kakaoAccount.get("profile");
             email = (String) kakaoAccount.get("email");
             nickname = (String) profile.get("nickname");
-        } else { // Google
-            providerId = oAuth2User.getAttribute("sub");
-            email = oAuth2User.getAttribute("email");
-            nickname = oAuth2User.getAttribute("name");
+
+        } else if ("naver".equals(registrationId)) {
+            Map<?, ?> response = (Map<?, ?>) oAuth2User.getAttributes().get("response");
+            email = (String) response.get("email");
+            nickname = (String) response.get("name");
+
+        } else if ("google".equals(registrationId)) {
+            email = (String) oAuth2User.getAttributes().get("email");
+            nickname = (String) oAuth2User.getAttributes().get("name");
+
+        } else {
+            throw new IllegalArgumentException("지원하지 않는 소셜 로그인: " + registrationId);
         }
 
-        memberService.findOrCreateSocialMember(email, registrationId.toUpperCase(), providerId, nickname);
+        final String finalEmail    = email;
+        final String finalNickname = nickname;
+        final String provider      = registrationId.toUpperCase();
+
+        memberRepository.findByEmail(finalEmail).orElseGet(() ->
+                memberRepository.save(Member.builder()
+                        .email(finalEmail)
+                        .password("OAUTH2_" + provider)
+                        .nickname(finalNickname + "_" + System.currentTimeMillis() % 10000)
+                        .provider(provider)
+                        .build())
+        );
 
         return oAuth2User;
     }

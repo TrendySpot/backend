@@ -23,13 +23,15 @@ public class AdminDashboardController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<DashboardResponse>> getDashboard() {
-        Long revenue = paymentRepository.sumAmount();
+        // sumAmount()가 Optional<Long>을 반환하므로 .orElse(0L)로 바로 기본값 처리를 해줍니다.
+        Long revenue = paymentRepository.sumAmount().orElse(0L);
+
         return ResponseEntity.ok(ApiResponse.of(DashboardResponse.builder()
                 .totalMembers(memberRepository.count())
                 .totalSpots(spotRepository.count())
                 .totalTickets(ticketRepository.count())
                 .totalReviews(reviewRepository.count())
-                .totalRevenue(revenue != null ? revenue : 0L)
+                .totalRevenue(revenue) // null 걱정 없이 안전하게 대입
                 .build()));
     }
 }
