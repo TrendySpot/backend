@@ -79,7 +79,7 @@ crawling:
 
 public-api:
   tour:
-    base-url: https://apis.data.go.kr/B551011/KorService2
+    base-url: https://api.kcisa.kr/openapi/CNV_060/request
     service-key: ${TOUR_SERVICE_KEY}
 
 springdoc:

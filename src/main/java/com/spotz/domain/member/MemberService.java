@@ -78,9 +78,23 @@ public class MemberService {
     @Transactional
     public void updateProfile(Long memberId, UpdateProfileRequest req) {
         Member member = memberRepository.findById(memberId).orElseThrow();
-        if (req.getNickname() != null) member.setNickname(req.getNickname());
-        if (req.getProfileImage() != null) member.setProfileImage(req.getProfileImage());
-        if (req.getPassword() != null) member.setPassword(passwordEncoder.encode(req.getPassword()));
+
+        // 1️⃣ 현재 비밀번호가 아예 안 넘어왔거나, DB에 암호화된 값과 다르면 컷트!
+        if (req.getCurrentPassword() == null ||
+                !passwordEncoder.matches(req.getCurrentPassword(), member.getPassword())) {
+            throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+        }
+
+        // 2️⃣ 현재 비밀번호가 맞았을 때만 아래 수정 로직들이 실행됨
+        if (req.getNickname() != null) {
+            member.setNickname(req.getNickname());
+        }
+        if (req.getProfileImage() != null) {
+            member.setProfileImage(req.getProfileImage());
+        }
+        if (req.getNewPassword() != null && !req.getNewPassword().isBlank()) {
+            member.setPassword(passwordEncoder.encode(req.getNewPassword()));
+        }
     }
 
     public FindEmailResponse findEmail(String nickname) {

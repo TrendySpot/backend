@@ -19,19 +19,69 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class CrawlingService {
-
     private final SpotRepository spotRepository;
     private final SpotScheduleRepository scheduleRepository;
     private final RestTemplate restTemplate;
+
+    // CrawlingService.java 상단에 추가
+    @Value("${KAKAO_REST_API_KEY}")
+    private String kakaoRestApiKey;
+
+    // 1. 주소 -> 좌표 변환 메서드 추가
+    private double[] getCoordinates(String address) {
+        if (address == null || address.equals("주소 미제공")) return new double[]{37.5665, 126.9780};
+
+        try {
+            // 1. 핵심: "현대백화점 신촌점"이나 "신촌로 83"만 남기도록 정제
+            // (U-PLEX, B2, 층, 상세정보 제거)
+            String cleanQuery = address.replaceAll("(U-PLEX|B\\d+|\\d+층|센트럴|커넥션|식품관|앞).*$", "").trim();
+
+            // 2. 혹시나 길면 25자까지만 (한글 25자는 인코딩해도 75~80바이트 내외라 안전함)
+            if (cleanQuery.length() > 25) {
+                cleanQuery = cleanQuery.substring(0, 25);
+            }
+
+            // 2. UriComponentsBuilder를 사용해 안전하게 URL 생성
+            // 이 방식은 RestTemplate이 인코딩을 두 번 하는 문제를 방지합니다.
+            String url = UriComponentsBuilder.fromHttpUrl("https://dapi.kakao.com/v2/local/search/keyword.json")
+                    .queryParam("query", cleanQuery)
+                    .build()
+                    .toUriString();
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.set("Authorization", "KakaoAK " + kakaoRestApiKey);
+
+            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(headers);
+            ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.GET, entity, String.class);
+
+            JsonNode root = new ObjectMapper().readTree(response.getBody());
+            JsonNode documents = root.path("documents");
+
+            if (documents.isArray() && documents.size() > 0) {
+                double x = documents.get(0).path("x").asDouble();
+                double y = documents.get(0).path("y").asDouble();
+                log.info("성공! [검색어: {}] -> 위도: {}, 경도: {}", cleanQuery, y, x);
+                return new double[]{y, x};
+            } else {
+                log.warn("결과 없음, 검색어: {}", cleanQuery);
+            }
+        } catch (Exception e) {
+            log.error("지오코딩 실패: {}", e.getMessage());
+        }
+        return new double[]{37.5665, 126.9780};
+    }
 
     @Value("${crawling.popga-sitemap}")
     private String popgaSitemap;
@@ -47,11 +97,11 @@ public class CrawlingService {
     public void crawlPopga() {
 
         // DB에 팝업 데이터 있으면 스킵
-        long existingCount = spotRepository.countBySpotType(Spot.SpotType.POPUP);
-        if (existingCount > 0) {
-            log.info("팝업 데이터 {}건 이미 존재 - 크롤링 스킵", existingCount);
-            return;
-        }
+//        long existingCount = spotRepository.countBySpotType(Spot.SpotType.POPUP);
+//        if (existingCount > 0) {
+//            log.info("팝업 데이터 {}건 이미 존재 - 크롤링 스킵", existingCount);
+//            return;
+//        }
 
         log.info("팝가 크롤링 시작...");
         try {
@@ -80,7 +130,7 @@ public class CrawlingService {
                         if (!url.contains("/popup/")) continue;
 
                         // 최대 10개 제한
-                        if (saved >= 10) {
+                        if (saved >= 30) {
                             log.info("최대 저장 개수(10개) 도달 - 크롤링 중단");
                             log.info("팝가 크롤링 완료 - 신규 저장: {}건", saved);
                             return;
@@ -130,8 +180,19 @@ public class CrawlingService {
                 .map(Element::text).orElse("주소 미제공").trim();
 
         // 이미지
-        String imageUrl = Optional.ofNullable(doc.selectFirst("img.object-contain"))
-                .map(el -> el.attr("src")).orElse("");
+        String imageUrl = doc.select("meta[property=og:image]").attr("content");
+
+// 2순위: 만약 메타 태그가 비어있다면, 차선책으로 본문 이미지 태그를 찾되 절대 경로(absUrl)로 안전하게 가져옵니다.
+        if (imageUrl == null || imageUrl.isBlank()) {
+            imageUrl = Optional.ofNullable(doc.selectFirst("img.object-cover")) // 보통 상세 포스터는 cover나 contain을 씀
+                    .map(el -> el.absUrl("src")) // 👈 absUrl을 써야 주소가 http://부터 끝까지 안전하게 다 붙습니다.
+                    .orElse("");
+        }
+
+// 3순위: 이것마저 없다면 리액트 화면 깨짐 방지용 더미(디폴트) 이미지 주소를 넣어둡니다.
+        if (imageUrl.isBlank() || imageUrl.equals("이미지 없음")) {
+            imageUrl = "https://your-domain.com/images/default-popup.jpg"; // 👈 준비하신 기본 이미지 주소 입력
+        }
 
         // 상세 설명
         String description = Optional.ofNullable(doc.selectFirst("div.whitespace-pre-line"))
@@ -141,18 +202,20 @@ public class CrawlingService {
         LocalDate[] dates = parsePopgaDate(doc);
         if (dates == null) return null;
 
+        double[] coords = getCoordinates(address);
+
         return Spot.builder()
                 .title(title)
                 .description(description)
                 .spotType(Spot.SpotType.POPUP)
                 .area(extractArea(address))
                 .address(address)
-                .latitude(37.5665)
-                .longitude(126.9780)
+                .latitude(coords[0])  // ⭕ 변환된 위도
+                .longitude(coords[1]) // ⭕ 변환된 경도
                 .startDate(dates[0])
                 .endDate(dates[1])
                 .imageUrl(imageUrl)
-                .price(0)
+                .price(generateRandomPrice())
                 .sourceId(sourceId)
                 .build();
     }
@@ -201,35 +264,27 @@ public class CrawlingService {
     }
 
     // ───────────── 관광공사 API - 전시/행사 ─────────────
+
     @EventListener(ApplicationReadyEvent.class)
     public void fetchExhibitsFromPublicApi() {
 
-        // DB에 전시 데이터 있으면 스킵
         long existingCount = spotRepository.countBySpotType(Spot.SpotType.EXHIBIT);
         if (existingCount > 0) {
             log.info("전시 데이터 {}건 이미 존재 - API 수집 스킵", existingCount);
             return;
         }
 
-        log.info("전시/행사 API 수집 시작...");
+        log.info("전시 API 수집 시작...");
         try {
-            String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-
-            String url = tourApiUrl + "/searchFestival2"
-                    + "?serviceKey=" + tourApiKey
-                    + "&numOfRows=10"
-                    + "&pageNo=1"
-                    + "&MobileOS=ETC"
-                    + "&MobileApp=spotz"
-                    + "&_type=json"
-                    + "&arrange=C"
-                    + "&eventStartDate=" + today;
+            String url = tourApiUrl + "?serviceKey=" + tourApiKey
+                    + "&numOfRows=300&pageNo=1";
 
             ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
 
             ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(response.getBody());
-            JsonNode items = root.path("response").path("body").path("items").path("item");
+            JsonNode items = root.path("response").path("body")
+                    .path("items").path("item");
 
             if (!items.isArray()) {
                 log.warn("전시 API 응답 데이터 없음");
@@ -240,55 +295,103 @@ public class CrawlingService {
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd");
 
             for (JsonNode item : items) {
+                //최대 10개 저장
+                if (saved >= 30) break;
 
                 try {
-                    // 1. 카테고리 코드 가져오기 (매뉴얼 기준 분류코드 확인)
-                    String cat3 = item.path("cat3").asText("");
-
-                    // 2. '전시' 관련 코드인지 검사 (A020701로 시작하는 것이 전시관/전시회)
-                    // 축제/페스티벌은 보통 A020702 등으로 분류되거나 카테고리가 다릅니다.
-                    if (!cat3.startsWith("A020701")) {
-                        log.info("전시 데이터가 아님 (제외): {} (cat3: {})", item.path("title").asText(), cat3);
-                        continue; // 축제나 공연은 무시하고 다음으로
-                    }
-
-                    String sourceId = "tour_" + item.path("contentid").asText();
-                    if (spotRepository.existsBySourceId(sourceId)) continue;
-
                     String title = item.path("title").asText("").trim();
                     if (title.isBlank()) continue;
 
-                    String startDateStr = item.path("eventstartdate").asText("").trim();
-                    String endDateStr   = item.path("eventenddate").asText("").trim();
-                    if (startDateStr.isBlank() || endDateStr.isBlank()) continue;
+                    // 공연/콘서트 제외 (전시회만)
+                    if (title.contains("콘서트") || title.contains("공연") ||
+                            title.contains("오케스트라") || title.contains("연주회") ||
+                            title.contains("뮤지컬") || title.contains("축제") ||
+                            title.contains("페스티벌")) {
+                        log.info("공연/축제 제외: {}", title);
+                        continue;
+                    }
 
-                    LocalDate startDate = LocalDate.parse(startDateStr, fmt);
-                    LocalDate endDate   = LocalDate.parse(endDateStr, fmt);
+                    // eventPeriod 파싱 ("20260529 ~ 20261031")
+                    String eventPeriod = item.path("eventPeriod").asText("").trim();
+                    if (eventPeriod.isBlank() || !eventPeriod.contains("~")) continue;
 
-                    String addr = item.path("addr1").asText("").trim();
-                    if (addr.isBlank()) addr = "주소 미제공";
+                    String[] dates = eventPeriod.split("~");
+                    if (dates.length < 2) continue;
 
-                    String mapxStr = item.path("mapx").asText("").trim();
-                    String mapyStr = item.path("mapy").asText("").trim();
-                    double longitude = mapxStr.isBlank() ? 126.9780 : Double.parseDouble(mapxStr);
-                    double latitude  = mapyStr.isBlank() ? 37.5665  : Double.parseDouble(mapyStr);
+                    LocalDate startDate = LocalDate.parse(dates[0].trim(), fmt);
+                    LocalDate endDate   = LocalDate.parse(dates[1].trim(), fmt);
 
-                    // detailCommon2 로 상세 설명 가져오기
-                    String contentId = item.path("contentid").asText();
-                    String description = fetchDescription(contentId);
+                    // 주소
+                    String address = item.path("eventSite").asText("").trim();
+                    if (address.isBlank()) address = "주소 미제공";
+
+                    // 설명 (HTML 태그 제거)
+                    String description = item.path("description").asText("")
+                            .replaceAll("<[^>]*>", "").trim();
+
+                    // "바로가기" 안내용 무의미한 설명 데이터 제외 필터링
+                    if (description.contains("자세한 정보는 '바로가기' 링크를 통해 확인하시기 바랍니다.")) {
+                        log.info("무의미한 설명 문구 제외: {}", title);
+                        continue;
+                    }
+
+                    // 1. 전시회 관련 핵심 단어가 제목에 포함되어 있는지 확인
+                    boolean isRealExhibit = title.contains("전시") || title.contains("특별") ||
+                            title.contains("기획") || title.contains("개인전") ||
+                            title.contains("박람") || title.contains("미술") ||
+                            title.contains("갤러리") || title.contains("아트") ||
+                            title.contains("박물관") || title.contains("사진");
+
+                    // 2. 만약 위 단어가 하나도 안 들어있다면 전시회가 아니라고 판단하고 쳐내기
+                    if (!isRealExhibit) {
+                        log.info("전시회 아님 (제목 미달로 제외): {}", title);
+                        continue;
+                    }
+
+                    // 가격
+                    String chargeRaw = item.path("charge").asText("").trim();
+                    int price = 0;
+                    if (!chargeRaw.isBlank() && !chargeRaw.equals("null")) {
+                        String digits = chargeRaw.replaceAll("[^0-9]", "");
+                        price = digits.isBlank() ? 0 : Integer.parseInt(digits);
+                    }
+
+// 💡 [수정] 7개는 무조건 0원(무료), 그 외 나머지는 랜덤 가격 적용
+                    if (price == 0) {
+                        if (saved < 7) {
+                            // 0번째부터 6번째까지 저장되는 총 7개의 전시회는 무료(0원)로 유지
+                            price = 0;
+                            log.info("무료 전시회로 지정 (7개 제한): {}", title);
+                        } else {
+                            // 7번째 저장되는 데이터부터는 랜덤 유료 가격 적용
+                            price = generateRandomPrice();
+                            log.info("유료 전시회(랜덤 가격)로 지정: {} -> {}원", title, price);
+                        }
+                    }
+
+                    String sourceId = "mcst_" + item.path("url").asText("")
+                            .replaceAll(".*pSeq=", "");
+                    if (spotRepository.existsBySourceId(sourceId)) continue;
+
+
+                    // 💡 [여기서부터 추가됨] 주소를 들고 카카오 지오코딩 메서드를 찔러 좌표를 알아옵니다.
+                    double[] coords = getCoordinates(address);
+                    double latitude = coords[0];
+                    double longitude = coords[1];
+
 
                     Spot spot = Spot.builder()
                             .title(title)
                             .description(description)
                             .spotType(Spot.SpotType.EXHIBIT)
-                            .area(extractArea(addr))
-                            .address(addr)
-                            .latitude(latitude)
-                            .longitude(longitude)
+                            .area(extractArea(address))
+                            .address(address)
+                            .latitude(latitude)    // ⭕ 계산된 진짜 위도 대입
+                            .longitude(longitude)  // ⭕ 계산된 진짜 경도 대입
                             .startDate(startDate)
                             .endDate(endDate)
-                            .imageUrl(item.path("firstimage").asText(""))
-                            .price(0)
+                            .imageUrl(item.path("imageObject").asText(""))
+                            .price(price)
                             .sourceId(sourceId)
                             .build();
 
@@ -301,42 +404,10 @@ public class CrawlingService {
                             item.path("title").asText("제목없음"), e.getMessage());
                 }
             }
-            log.info("전시/행사 API 수집 완료 - 신규 저장: {}건", saved);
+            log.info("전시 API 수집 완료 - 신규 저장: {}건", saved);
 
         } catch (Exception e) {
-            log.error("전시/행사 API 수집 실패", e);
-        }
-    }
-
-    // detailCommon2 로 상세 설명 가져오기
-    private String fetchDescription(String contentId) {
-        try {
-            String url = tourApiUrl + "/detailCommon2"
-                    + "?serviceKey=" + tourApiKey
-                    + "&MobileOS=ETC"
-                    + "&MobileApp=spotz"
-                    + "&_type=json"
-                    + "&contentId=" + contentId
-                    + "&overviewYN=Y";
-
-            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode root = mapper.readTree(response.getBody());
-
-            JsonNode itemNode = root.path("response").path("body").path("items").path("item");
-
-            String overview;
-            if (itemNode.isArray()) {
-                overview = itemNode.path(0).path("overview").asText("");
-            } else {
-                overview = itemNode.path("overview").asText("");
-            }
-
-            return overview.replaceAll("<[^>]*>", "").trim();
-
-        } catch (Exception e) {
-            log.warn("상세 설명 조회 실패 [{}]: {}", contentId, e.getMessage());
-            return "";
+            log.error("전시 API 수집 실패", e);
         }
     }
 
@@ -371,5 +442,12 @@ public class CrawlingService {
         if (address.contains("울산")) return "울산";
         if (address.contains("제주")) return "제주";
         return "기타";
+    }
+
+    // 💡 10,000원 ~ 50,000원 사이의 천 원 단위 랜덤 가격 생성
+    private int generateRandomPrice() {
+        // 10부터 50까지의 랜덤 정수 생성 (50을 포함하기 위해 bound를 51로 설정)
+        int randomThousand = java.util.concurrent.ThreadLocalRandom.current().nextInt(10, 51);
+        return randomThousand * 1000; // 1,000을 곱해 만의 자리 ~ 천의 자리 숫자로 변환
     }
 }
