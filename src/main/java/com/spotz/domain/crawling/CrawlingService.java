@@ -263,6 +263,48 @@ public class CrawlingService {
         }
     }
 
+    // 1. 핵심: 건물명(키워드)을 던져서 지역명(서울/경기 등)을 받아오는 메서드
+    private String fetchAreaByKeyword(String placeName) {
+        if (placeName == null || placeName.isBlank()) return "기타";
+
+        try {
+            String url = UriComponentsBuilder.fromHttpUrl("https://dapi.kakao.com/v2/local/search/keyword.json")
+                    .queryParam("query", placeName)
+                    .build().toUriString();
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.set("Authorization", "KakaoAK " + kakaoRestApiKey);
+            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.GET, entity, String.class);
+            JsonNode root = new ObjectMapper().readTree(response.getBody());
+            JsonNode documents = root.path("documents");
+
+            if (documents.isArray() && documents.size() > 0) {
+                // 주소 필드(address_name)를 바로 활용하여 정제
+                return simplifyRegion(documents.get(0).path("address_name").asText());
+            }
+        } catch (Exception e) {
+            log.error("지역 추출 실패 [{}]: {}", placeName, e.getMessage());
+        }
+        return "기타";
+    }
+
+    // 2. 정제용 (이건 있어야 합니다)
+    private String simplifyRegion(String region) {
+        if (region.contains("서울")) return "서울";
+        if (region.contains("경기")) return "경기";
+        if (region.contains("부산")) return "부산";
+        if (region.contains("인천")) return "인천";
+        if (region.contains("대구")) return "대구";
+        if (region.contains("광주")) return "광주";
+        if (region.contains("대전")) return "대전";
+        if (region.contains("울산")) return "울산";
+        if (region.contains("제주")) return "제주";
+        return "기타";
+    }
+
+
     // ───────────── 관광공사 API - 전시/행사 ─────────────
 
     @EventListener(ApplicationReadyEvent.class)
@@ -379,12 +421,12 @@ public class CrawlingService {
                     double latitude = coords[0];
                     double longitude = coords[1];
 
-
+                    String area = fetchAreaByKeyword(address);
                     Spot spot = Spot.builder()
                             .title(title)
                             .description(description)
                             .spotType(Spot.SpotType.EXHIBIT)
-                            .area(extractArea(address))
+                            .area(area)
                             .address(address)
                             .latitude(latitude)    // ⭕ 계산된 진짜 위도 대입
                             .longitude(longitude)  // ⭕ 계산된 진짜 경도 대입
