@@ -96,12 +96,12 @@ public class CrawlingService {
     @EventListener(ApplicationReadyEvent.class)
     public void crawlPopga() {
 
-        // DB에 팝업 데이터 있으면 스킵
-//        long existingCount = spotRepository.countBySpotType(Spot.SpotType.POPUP);
-//        if (existingCount > 0) {
-//            log.info("팝업 데이터 {}건 이미 존재 - 크롤링 스킵", existingCount);
-//            return;
-//        }
+       //  DB에 팝업 데이터 있으면 스킵
+        long existingCount = spotRepository.countBySpotType(Spot.SpotType.POPUP);
+        if (existingCount > 0) {
+            log.info("팝업 데이터 {}건 이미 존재 - 크롤링 스킵", existingCount);
+            return;
+        }
 
         log.info("팝가 크롤링 시작...");
         try {
