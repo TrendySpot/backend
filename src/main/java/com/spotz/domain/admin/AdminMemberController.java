@@ -2,6 +2,7 @@ package com.spotz.domain.admin;
 
 import com.spotz.domain.member.Member;
 import com.spotz.domain.member.MemberRepository;
+import com.spotz.domain.member.MemberService;
 import com.spotz.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 public class AdminMemberController {
 
     private final MemberRepository memberRepository;
+    // [작성, 06월 12일 10:37] MemberService 의존성 주입 추가
+    private final MemberService memberService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<AdminMemberResponse>>> getMembers(
@@ -32,7 +35,8 @@ public class AdminMemberController {
 
     @DeleteMapping("/{memberId}")
     public ResponseEntity<ApiResponse<Void>> deleteMember(@PathVariable Long memberId) {
-        memberRepository.deleteById(memberId);
+        // [작성, 06월 12일 10:37] 기존 memberRepository.deleteById 지우고, 커스텀 삭제 비즈니스 로직(재고 복구, 결제/티켓/리뷰/찜 선삭제)을 수행하도록 교체
+        memberService.deleteMember(memberId);
         return ResponseEntity.ok(ApiResponse.success("회원이 탈퇴 처리되었습니다."));
     }
 

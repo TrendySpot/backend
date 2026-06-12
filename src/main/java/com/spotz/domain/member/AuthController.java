@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final MemberService memberService;
+    private final MemberRepository memberRepository;
 
     @PostMapping("/email/send")
     public ResponseEntity<ApiResponse<Void>> sendEmailCode(@RequestParam String email) {
@@ -77,4 +78,25 @@ public class AuthController {
         memberService.resetPassword(req);
         return ResponseEntity.ok(ApiResponse.success("비밀번호가 변경되었습니다."));
     }
+
+    //닉네임 중복
+    @GetMapping("/check-nickname")
+    public ResponseEntity<ApiResponse<Boolean>> checkNickname(@RequestParam String nickname) {
+        boolean exists = memberRepository.existsByNickname(nickname);
+        return ResponseEntity.ok(ApiResponse.of(exists)); // true면 중복, false면 사용 가능
+    }
+
+    //닉네임 변경
+    @PatchMapping("/nickname")
+    public ResponseEntity<ApiResponse<Void>> updateNickname(
+            @AuthenticationPrincipal Long memberId,
+            @RequestParam String nickname) {
+
+        memberService.updateNickname(memberId, nickname);
+
+        return ResponseEntity.ok(
+                ApiResponse.success("닉네임이 변경되었습니다.")
+        );
+    }
+
 }

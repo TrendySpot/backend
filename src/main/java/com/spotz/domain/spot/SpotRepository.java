@@ -9,4 +9,5 @@ public interface SpotRepository extends JpaRepository<Spot, Long>, SpotRepositor
     Optional<Spot> findBySourceId(String sourceId);
 
     long countBySpotType(Spot.SpotType spotType);
+
 }

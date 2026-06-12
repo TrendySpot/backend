@@ -1,5 +1,11 @@
 package com.spotz.domain.member;
 
+import com.spotz.domain.payment.PaymentRepository;
+import com.spotz.domain.review.ReviewRepository;
+import com.spotz.domain.spot.SpotSchedule;
+import com.spotz.domain.ticket.Ticket;
+import com.spotz.domain.ticket.TicketRepository;
+import com.spotz.domain.wishlist.WishlistRepository;
 import com.spotz.global.email.EmailService;
 import com.spotz.global.jwt.JwtProvider;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -21,6 +29,13 @@ public class MemberService {
     private final JwtProvider jwtProvider;
     private final StringRedisTemplate redisTemplate;
     private final EmailService emailService;
+
+    // [작성, 06월 12일 10:16] 연관 데이터 수동 제어를 위한 레포지토리 의존성 주입 추가
+    private final TicketRepository ticketRepository;
+    private final ReviewRepository reviewRepository;
+    private final WishlistRepository wishlistRepository;
+    private final PaymentRepository paymentRepository;
+
 
     @Transactional
     public void register(RegisterRequest req) {
@@ -46,7 +61,7 @@ public class MemberService {
         String refreshToken = jwtProvider.createRefreshToken(member.getMemberId());
         redisTemplate.opsForValue().set("refresh:" + member.getMemberId(), refreshToken, Duration.ofMillis(1209600000L));
         return new LoginResponse(accessToken, refreshToken, member.getNickname(), member.getRole().name(),
-                member.getMemberId(), member.getEmail());
+                member.getMemberId(), member.getEmail(),    member.getProvider());
     }
 
     public TokenRefreshResponse refresh(String refreshToken) {
@@ -135,4 +150,56 @@ public class MemberService {
         member.setPassword(passwordEncoder.encode(req.getNewPassword()));
         redisTemplate.delete("pw:verified:" + req.getEmail());
     }
+
+    // [작성, 06월 12일 10:16] 명시적 자식 데이터 삭제 및 미래 일정 티켓 조건부 재고 복구 로직 구현
+    @Transactional
+    public void deleteMember(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 회원이 존재하지 않습니다."));
+
+        // [작성, 06월 12일 10:16] TicketRepository의 회원 ID 기반 조회 메서드를 호출하여 티켓 목록을 가져옴
+        List<Ticket> tickets = ticketRepository.findByMemberMemberIdOrderByCreatedAtDesc(memberId);
+        for (Ticket ticket : tickets) {
+            if (ticket.getStatus() == Ticket.TicketStatus.RESERVED) {
+                SpotSchedule schedule = ticket.getSchedule();
+
+                // [작성, 06월 12일 10:16] SpotSchedule의 eventDate가 오늘 이후인 경우에만 increaseTickets 메서드로 재고 복구
+                if (schedule != null && schedule.getEventDate().isAfter(LocalDate.now())) {
+                    schedule.increaseTickets(ticket.getTicketCount());
+                }
+            }
+            // [작성, 06월 12일 10:16] 외래키 제약조건 위배를 방지하기 위해 티켓 ID에 연결된 결제 데이터 선삭제
+            paymentRepository.deleteByTicketTicketId(ticket.getTicketId());
+        }
+
+        // [작성, 06월 12일 10:16] 조회된 회원의 모든 티켓 일괄 삭제
+        ticketRepository.deleteAll(tickets);
+
+        // [작성, 06월 12일 10:16] 회원 ID에 종속된 리뷰 및 찜 데이터 명시적 제거
+        reviewRepository.deleteByMemberMemberId(memberId);
+        wishlistRepository.deleteByMemberMemberId(memberId);
+
+        // [작성, 06월 12일 10:16] 부모 테이블인 회원 데이터 최종 삭제
+        memberRepository.delete(member);
+    }
+
+    //닉네임 확인
+    public boolean checkNickname(String nickname) {
+        return !memberRepository.existsByNickname(nickname);
+    }
+
+    //닉네임 변경
+    @Transactional
+    public void updateNickname(Long memberId, String nickname) {
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow();
+
+        if(memberRepository.existsByNickname(nickname)) {
+            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
+        }
+
+        member.setNickname(nickname);
+    }
+
 }

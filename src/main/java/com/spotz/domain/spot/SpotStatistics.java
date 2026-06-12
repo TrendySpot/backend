@@ -23,7 +23,7 @@ import java.time.LocalDateTime;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
-public class SpotStatistics {
+public class  SpotStatistics {
 
 	@Id
 	@Column(name = "spot_id")

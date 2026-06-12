@@ -130,7 +130,7 @@ public class CrawlingService {
                         if (!url.contains("/popup/")) continue;
 
                         // 최대 10개 제한
-                        if (saved >= 30) {
+                        if (saved >= 2) {
                             log.info("최대 저장 개수(10개) 도달 - 크롤링 중단");
                             log.info("팝가 크롤링 완료 - 신규 저장: {}건", saved);
                             return;
@@ -201,6 +201,11 @@ public class CrawlingService {
         // 날짜 파싱
         LocalDate[] dates = parsePopgaDate(doc);
         if (dates == null) return null;
+
+        // 종료된 팝업 제외
+        if (!dates[1].isAfter(LocalDate.now())) {
+            return null;
+        }
 
         double[] coords = getCoordinates(address);
 
@@ -338,7 +343,7 @@ public class CrawlingService {
 
             for (JsonNode item : items) {
                 //최대 10개 저장
-                if (saved >= 30) break;
+                if (saved >= 2) break;
 
                 try {
                     String title = item.path("title").asText("").trim();
@@ -363,6 +368,11 @@ public class CrawlingService {
                     LocalDate startDate = LocalDate.parse(dates[0].trim(), fmt);
                     LocalDate endDate   = LocalDate.parse(dates[1].trim(), fmt);
 
+                    // 오늘보다 종료일이 이전이거나 오늘이면 제외
+                    if (!endDate.isAfter(LocalDate.now())) {
+                        log.info("종료된 전시 제외: {} ({})", title, endDate);
+                        continue;
+                    }
                     // 주소
                     String address = item.path("eventSite").asText("").trim();
                     if (address.isBlank()) address = "주소 미제공";
@@ -398,7 +408,7 @@ public class CrawlingService {
                         price = digits.isBlank() ? 0 : Integer.parseInt(digits);
                     }
 
-// 💡 [수정] 7개는 무조건 0원(무료), 그 외 나머지는 랜덤 가격 적용
+                    // 💡 [수정] 7개는 무조건 0원(무료), 그 외 나머지는 랜덤 가격 적용
                     if (price == 0) {
                         if (saved < 7) {
                             // 0번째부터 6번째까지 저장되는 총 7개의 전시회는 무료(0원)로 유지
