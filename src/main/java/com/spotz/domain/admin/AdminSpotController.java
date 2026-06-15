@@ -19,6 +19,8 @@ public class AdminSpotController {
 
     private final SpotRepository spotRepository;
     private final SpotScheduleRepository scheduleRepository;
+    // [작성, 06월 12일 10:47] 연쇄 삭제 비즈니스 로직 호출을 위해 SpotService 의존성 주입 추가
+    private final SpotService spotService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<AdminSpotResponse>>> getSpots(
@@ -51,7 +53,7 @@ public class AdminSpotController {
 
     @PutMapping("/{spotId}")
     public ResponseEntity<ApiResponse<Void>> updateSpot(@PathVariable Long spotId,
-                                                         @RequestBody AdminSpotRequest req) {
+                                                        @RequestBody AdminSpotRequest req) {
         Spot spot = spotRepository.findById(spotId).orElseThrow();
         spot.setTitle(req.getTitle()); spot.setDescription(req.getDescription());
         spot.setArea(req.getArea()); spot.setAddress(req.getAddress());
@@ -65,7 +67,8 @@ public class AdminSpotController {
 
     @DeleteMapping("/{spotId}")
     public ResponseEntity<ApiResponse<Void>> deleteSpot(@PathVariable Long spotId) {
-        spotRepository.deleteById(spotId);
+        // [수정, 06월 12일 10:47] 기존 spotRepository.deleteById 방식 대신, 모든 연관 관계를 안전하게 지워주는 spotService 로직으로 변경
+        spotService.deleteSpot(spotId);
         return ResponseEntity.ok(ApiResponse.success("스팟이 삭제되었습니다."));
     }
 }

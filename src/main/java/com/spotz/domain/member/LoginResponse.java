@@ -12,4 +12,5 @@ public class LoginResponse {
     private String role;
     private Long memberId;
     private String email;
+    private String provider;
 }

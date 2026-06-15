@@ -50,7 +50,7 @@ public class AuthController {
 
     @PatchMapping("/me")
     public ResponseEntity<ApiResponse<Void>> updateProfile(@AuthenticationPrincipal Long memberId,
-                                                            @RequestBody UpdateProfileRequest req) {
+                                                           @RequestBody UpdateProfileRequest req) {
         memberService.updateProfile(memberId, req);
         return ResponseEntity.ok(ApiResponse.success("프로필이 수정되었습니다."));
     }
@@ -77,4 +77,24 @@ public class AuthController {
         memberService.resetPassword(req);
         return ResponseEntity.ok(ApiResponse.success("비밀번호가 변경되었습니다."));
     }
+
+
+    @GetMapping("/check-nickname")
+    public ResponseEntity<ApiResponse<Boolean>> checkNickname(@RequestParam String nickname) {
+        return ResponseEntity.ok(ApiResponse.of(memberService.checkNickname(nickname)));
+    }
+
+    @PatchMapping("/nickname")
+    public ResponseEntity<ApiResponse<Void>> updateNickname(
+            @AuthenticationPrincipal Long memberId,
+            @RequestParam String nickname) {
+
+        memberService.updateNickname(memberId, nickname);
+
+        return ResponseEntity.ok(
+                ApiResponse.success("닉네임이 변경되었습니다.")
+        );
+    }
+
+
 }
