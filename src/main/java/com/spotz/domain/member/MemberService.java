@@ -46,7 +46,7 @@ public class MemberService {
         String refreshToken = jwtProvider.createRefreshToken(member.getMemberId());
         redisTemplate.opsForValue().set("refresh:" + member.getMemberId(), refreshToken, Duration.ofMillis(1209600000L));
         return new LoginResponse(accessToken, refreshToken, member.getNickname(), member.getRole().name(),
-                member.getMemberId(), member.getEmail());
+                member.getMemberId(), member.getEmail(), member.getProvider());
     }
 
     public TokenRefreshResponse refresh(String refreshToken) {
@@ -134,5 +134,22 @@ public class MemberService {
         Member member = memberRepository.findByEmail(req.getEmail()).orElseThrow();
         member.setPassword(passwordEncoder.encode(req.getNewPassword()));
         redisTemplate.delete("pw:verified:" + req.getEmail());
+    }
+
+    public boolean checkNickname(String nickname) {
+        return !memberRepository.existsByNickname(nickname);
+    }
+
+    @Transactional
+    public void updateNickname(Long memberId, String nickname) {
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow();
+
+        if(memberRepository.existsByNickname(nickname)) {
+            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
+        }
+
+        member.setNickname(nickname);
     }
 }

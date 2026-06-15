@@ -17,7 +17,13 @@ public class SpotService {
     private final SpotScheduleRepository scheduleRepository;
 
     public Page<SpotSummaryDto> searchSpots(SpotSearchCondition cond, Pageable pageable) {
-        return spotRepository.search(cond, pageable).map(SpotSummaryDto::from);
+        return spotRepository.search(cond, pageable)
+                .map(spot -> {
+                    List<SpotSchedule> schedules =
+                            scheduleRepository.findBySpotSpotIdOrderByEventDate(spot.getSpotId());
+
+                    return SpotSummaryDto.from(spot, schedules);
+                });
     }
 
     public SpotDetailDto getSpotDetail(Long spotId) {
