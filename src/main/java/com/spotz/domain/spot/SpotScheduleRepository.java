@@ -15,4 +15,7 @@ public interface SpotScheduleRepository extends JpaRepository<SpotSchedule, Long
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM SpotSchedule s WHERE s.scheduleId = :id")
     Optional<SpotSchedule> findByIdWithLock(@Param("id") Long id);
+
+    // [작성, 06월 12일 10:48] 스팟 삭제 비즈니스 로직(SpotService)에서 연관된 전체 스케줄을 조회하기 위한 메서드 추가
+    List<SpotSchedule> findBySpotSpotId(Long spotId);
 }
