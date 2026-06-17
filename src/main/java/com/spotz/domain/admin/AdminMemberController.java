@@ -5,6 +5,7 @@ import com.spotz.domain.member.MemberRepository;
 // [작성, 06월 12일 10:37] 재고 복구 및 연쇄 삭제 비즈니스 로직 호출을 위해 MemberService 임포트 추가
 import com.spotz.domain.member.MemberService;
 import com.spotz.global.response.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/admin/members")
+@SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor
 public class AdminMemberController {
 

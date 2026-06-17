@@ -2,6 +2,7 @@ package com.spotz.domain.admin;
 
 import com.spotz.domain.spot.*;
 import com.spotz.global.response.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +15,7 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/admin/spots")
+@SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor
 public class AdminSpotController {
 

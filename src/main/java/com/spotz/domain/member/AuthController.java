@@ -1,6 +1,7 @@
 package com.spotz.domain.member;
 
 import com.spotz.global.response.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
+@SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor
 public class AuthController {
 

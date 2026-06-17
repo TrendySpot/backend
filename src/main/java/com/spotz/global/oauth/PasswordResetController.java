@@ -1,5 +1,6 @@
 package com.spotz.global.oauth;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 // [작성 06월 10일 16:33] 비밀번호 재설정 요청 및 완료 처리를 담당하는 REST 컨트롤러 구현
 @RestController
 @RequestMapping("/api/auth")
+@SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor
 public class PasswordResetController {
 
