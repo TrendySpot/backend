@@ -44,7 +44,7 @@ public class SecurityConfig {
                                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**",
                                         "/api-docs/**").permitAll()
                                 .requestMatchers("/ws/**").permitAll()
-                                .requestMatchers("/login/oauth2/code/**").permitAll()
+                                .requestMatchers("/login/oauth2/code/**").permitAll() //소셜로그인 통합
 
                                 // ✅ 관리자 전용
                                 .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
