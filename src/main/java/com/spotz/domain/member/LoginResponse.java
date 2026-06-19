@@ -12,5 +12,5 @@ public class LoginResponse {
     private String role;
     private Long memberId;
     private String email;
-    private String provider;
+    private String provider;  // ← 추가 (LOCAL, KAKAO, NAVER)
 }

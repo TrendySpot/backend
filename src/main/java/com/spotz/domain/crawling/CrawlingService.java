@@ -23,8 +23,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -35,53 +33,8 @@ public class CrawlingService {
     private final SpotScheduleRepository scheduleRepository;
     private final RestTemplate restTemplate;
 
-    // CrawlingService.java 상단에 추가
     @Value("${KAKAO_REST_API_KEY}")
     private String kakaoRestApiKey;
-
-    // 1. 주소 -> 좌표 변환 메서드 추가
-    private double[] getCoordinates(String address) {
-        if (address == null || address.equals("주소 미제공")) return new double[]{37.5665, 126.9780};
-
-        try {
-            // 1. 핵심: "현대백화점 신촌점"이나 "신촌로 83"만 남기도록 정제
-            // (U-PLEX, B2, 층, 상세정보 제거)
-            String cleanQuery = address.replaceAll("(U-PLEX|B\\d+|\\d+층|센트럴|커넥션|식품관|앞).*$", "").trim();
-
-            // 2. 혹시나 길면 25자까지만 (한글 25자는 인코딩해도 75~80바이트 내외라 안전함)
-            if (cleanQuery.length() > 25) {
-                cleanQuery = cleanQuery.substring(0, 25);
-            }
-
-            // 2. UriComponentsBuilder를 사용해 안전하게 URL 생성
-            // 이 방식은 RestTemplate이 인코딩을 두 번 하는 문제를 방지합니다.
-            String url = UriComponentsBuilder.fromHttpUrl("https://dapi.kakao.com/v2/local/search/keyword.json")
-                    .queryParam("query", cleanQuery)
-                    .build()
-                    .toUriString();
-
-            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-            headers.set("Authorization", "KakaoAK " + kakaoRestApiKey);
-
-            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(headers);
-            ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.GET, entity, String.class);
-
-            JsonNode root = new ObjectMapper().readTree(response.getBody());
-            JsonNode documents = root.path("documents");
-
-            if (documents.isArray() && documents.size() > 0) {
-                double x = documents.get(0).path("x").asDouble();
-                double y = documents.get(0).path("y").asDouble();
-                log.info("성공! [검색어: {}] -> 위도: {}, 경도: {}", cleanQuery, y, x);
-                return new double[]{y, x};
-            } else {
-                log.warn("결과 없음, 검색어: {}", cleanQuery);
-            }
-        } catch (Exception e) {
-            log.error("지오코딩 실패: {}", e.getMessage());
-        }
-        return new double[]{37.5665, 126.9780};
-    }
 
     @Value("${crawling.popga-sitemap}")
     private String popgaSitemap;
@@ -92,11 +45,106 @@ public class CrawlingService {
     @Value("${public-api.tour.service-key}")
     private String tourApiKey;
 
+    // ───────────── 내부 결과 클래스 ─────────────
+    private static class CoordResult {
+        final double latitude;
+        final double longitude;
+        final String area;
+
+        CoordResult(double latitude, double longitude, String area) {
+            this.latitude = latitude;
+            this.longitude = longitude;
+            this.area = area;
+        }
+    }
+
+    // ───────────── 공통: 주소 -> 좌표 + 지역 변환 ─────────────
+
+    /**
+     * 주소/장소명을 카카오 키워드 검색으로 위도·경도·지역으로 변환.
+     *
+     * 카카오 Local API 응답:
+     *   x = 경도(longitude)
+     *   y = 위도(latitude)
+     *   address_name = 전체 주소 (지역 추출에 사용)
+     */
+    private CoordResult getCoordinates(String address) {
+        if (address == null || address.isBlank() || address.equals("주소 미제공")) {
+            return new CoordResult(37.5665, 126.9780, "기타");
+        }
+
+        try {
+            // 층, 관, 전시실 등 세부 위치 정보 제거 → 카카오 검색 정확도 향상
+            String cleanQuery = address
+                    .replaceAll("(유플렉스|U-PLEX|B\\d+|\\d+층|\\d+관|\\d+전시실|\\d+홀|\\d+F|센트럴|커넥션|식품관|앞).*$", "")
+                    .trim();
+
+            if (cleanQuery.length() > 30) {
+                cleanQuery = cleanQuery.substring(0, 30);
+            }
+
+
+            String url = UriComponentsBuilder
+                    .fromHttpUrl("https://dapi.kakao.com/v2/local/search/keyword.json")
+                    .queryParam("query", cleanQuery)
+                    .build()
+                    .toUriString();
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.set("Authorization", "KakaoAK " + kakaoRestApiKey);
+            headers.set("KA", "sdk/1.0.0 os/javascript origin/http://localhost");
+            org.springframework.http.HttpEntity<String> entity =
+                    new org.springframework.http.HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, org.springframework.http.HttpMethod.GET, entity, String.class);
+
+            JsonNode root = new ObjectMapper().readTree(response.getBody());
+            JsonNode documents = root.path("documents");
+
+            if (documents.isArray() && documents.size() > 0) {
+                double longitude   = documents.get(0).path("x").asDouble();
+                double latitude    = documents.get(0).path("y").asDouble();
+                String addressName = documents.get(0).path("address_name").asText("");
+                String area        = simplifyRegion(addressName);
+                log.info("변환 성공 [검색어: {}] -> 위도: {}, 경도: {}, 지역: {}", cleanQuery, latitude, longitude, area);
+                return new CoordResult(latitude, longitude, area);
+            } else {
+                log.warn("좌표 결과 없음, 검색어: {}", cleanQuery);
+            }
+        } catch (Exception e) {
+            log.error("지오코딩 실패: {}", e.getMessage());
+        }
+
+        return new CoordResult(37.5665, 126.9780, "기타");
+    }
+
+    // ───────────── 지역명 정제 ─────────────
+    private String simplifyRegion(String addressName) {
+        if (addressName.contains("서울")) return "서울";
+        if (addressName.contains("경기")) return "경기";
+        if (addressName.contains("부산")) return "부산";
+        if (addressName.contains("대구")) return "대구";
+        if (addressName.contains("인천")) return "인천";
+        if (addressName.contains("광주")) return "광주";
+        if (addressName.contains("대전")) return "대전";
+        if (addressName.contains("울산")) return "울산";
+        if (addressName.contains("제주")) return "제주";
+        if (addressName.contains("강원")) return "강원";
+        if (addressName.contains("충북") || addressName.contains("충청북")) return "충북";
+        if (addressName.contains("충남") || addressName.contains("충청남")) return "충남";
+        if (addressName.contains("전북") || addressName.contains("전라북")) return "전북";
+        if (addressName.contains("전남") || addressName.contains("전라남")) return "전남";
+        if (addressName.contains("경북") || addressName.contains("경상북")) return "경북";
+        if (addressName.contains("경남") || addressName.contains("경상남")) return "경남";
+        if (addressName.contains("세종")) return "세종";
+        return "기타";
+    }
+
     // ───────────── 팝가 크롤링 ─────────────
+
     @EventListener(ApplicationReadyEvent.class)
     public void crawlPopga() {
-
-       //  DB에 팝업 데이터 있으면 스킵
         long existingCount = spotRepository.countBySpotType(Spot.SpotType.POPUP);
         if (existingCount > 0) {
             log.info("팝업 데이터 {}건 이미 존재 - 크롤링 스킵", existingCount);
@@ -129,9 +177,8 @@ public class CrawlingService {
 
                         if (!url.contains("/popup/")) continue;
 
-                        // 최대 10개 제한
-                        if (saved >= 30) {
-                            log.info("최대 저장 개수(10개) 도달 - 크롤링 중단");
+                        if (saved >= 2) {
+                            log.info("최대 저장 개수 도달 - 크롤링 중단");
                             log.info("팝가 크롤링 완료 - 신규 저장: {}건", saved);
                             return;
                         }
@@ -179,19 +226,19 @@ public class CrawlingService {
         String address = Optional.ofNullable(doc.selectFirst("p.wrap-break-word"))
                 .map(Element::text).orElse("주소 미제공").trim();
 
-        // 이미지
+        // 이미지 (1순위: og:image 메타태그)
         String imageUrl = doc.select("meta[property=og:image]").attr("content");
 
-// 2순위: 만약 메타 태그가 비어있다면, 차선책으로 본문 이미지 태그를 찾되 절대 경로(absUrl)로 안전하게 가져옵니다.
+        // 2순위: 본문 이미지
         if (imageUrl == null || imageUrl.isBlank()) {
-            imageUrl = Optional.ofNullable(doc.selectFirst("img.object-cover")) // 보통 상세 포스터는 cover나 contain을 씀
-                    .map(el -> el.absUrl("src")) // 👈 absUrl을 써야 주소가 http://부터 끝까지 안전하게 다 붙습니다.
+            imageUrl = Optional.ofNullable(doc.selectFirst("img.object-cover"))
+                    .map(el -> el.absUrl("src"))
                     .orElse("");
         }
 
-// 3순위: 이것마저 없다면 리액트 화면 깨짐 방지용 더미(디폴트) 이미지 주소를 넣어둡니다.
+        // 3순위: 기본 이미지
         if (imageUrl.isBlank() || imageUrl.equals("이미지 없음")) {
-            imageUrl = "https://your-domain.com/images/default-popup.jpg"; // 👈 준비하신 기본 이미지 주소 입력
+            imageUrl = "https://your-domain.com/images/default-popup.jpg";
         }
 
         // 상세 설명
@@ -202,16 +249,20 @@ public class CrawlingService {
         LocalDate[] dates = parsePopgaDate(doc);
         if (dates == null) return null;
 
-        double[] coords = getCoordinates(address);
+        // 종료된 팝업 제외
+        if (!dates[1].isAfter(LocalDate.now())) return null;
+
+        // ✅ 좌표 + 지역 한 번에 변환
+        CoordResult coords = getCoordinates(address);
 
         return Spot.builder()
                 .title(title)
                 .description(description)
                 .spotType(Spot.SpotType.POPUP)
-                .area(extractArea(address))
+                .area(coords.area)         // ✅ 카카오 address_name 기반 지역
                 .address(address)
-                .latitude(coords[0])  // ⭕ 변환된 위도
-                .longitude(coords[1]) // ⭕ 변환된 경도
+                .latitude(coords.latitude)
+                .longitude(coords.longitude)
                 .startDate(dates[0])
                 .endDate(dates[1])
                 .imageUrl(imageUrl)
@@ -237,7 +288,7 @@ public class CrawlingService {
             LocalDate endDate   = parseShortDate(parts[1].trim());
 
             if (startDate == null || endDate == null) return null;
-            return new LocalDate[]{ startDate, endDate };
+            return new LocalDate[]{startDate, endDate};
 
         } catch (Exception e) {
             log.warn("날짜 파싱 실패: {}", e.getMessage());
@@ -263,53 +314,10 @@ public class CrawlingService {
         }
     }
 
-    // 1. 핵심: 건물명(키워드)을 던져서 지역명(서울/경기 등)을 받아오는 메서드
-    private String fetchAreaByKeyword(String placeName) {
-        if (placeName == null || placeName.isBlank()) return "기타";
-
-        try {
-            String url = UriComponentsBuilder.fromHttpUrl("https://dapi.kakao.com/v2/local/search/keyword.json")
-                    .queryParam("query", placeName)
-                    .build().toUriString();
-
-            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-            headers.set("Authorization", "KakaoAK " + kakaoRestApiKey);
-            org.springframework.http.HttpEntity<String> entity = new org.springframework.http.HttpEntity<>(headers);
-
-            ResponseEntity<String> response = restTemplate.exchange(url, org.springframework.http.HttpMethod.GET, entity, String.class);
-            JsonNode root = new ObjectMapper().readTree(response.getBody());
-            JsonNode documents = root.path("documents");
-
-            if (documents.isArray() && documents.size() > 0) {
-                // 주소 필드(address_name)를 바로 활용하여 정제
-                return simplifyRegion(documents.get(0).path("address_name").asText());
-            }
-        } catch (Exception e) {
-            log.error("지역 추출 실패 [{}]: {}", placeName, e.getMessage());
-        }
-        return "기타";
-    }
-
-    // 2. 정제용 (이건 있어야 합니다)
-    private String simplifyRegion(String region) {
-        if (region.contains("서울")) return "서울";
-        if (region.contains("경기")) return "경기";
-        if (region.contains("부산")) return "부산";
-        if (region.contains("인천")) return "인천";
-        if (region.contains("대구")) return "대구";
-        if (region.contains("광주")) return "광주";
-        if (region.contains("대전")) return "대전";
-        if (region.contains("울산")) return "울산";
-        if (region.contains("제주")) return "제주";
-        return "기타";
-    }
-
-
     // ───────────── 관광공사 API - 전시/행사 ─────────────
 
     @EventListener(ApplicationReadyEvent.class)
     public void fetchExhibitsFromPublicApi() {
-
         long existingCount = spotRepository.countBySpotType(Spot.SpotType.EXHIBIT);
         if (existingCount > 0) {
             log.info("전시 데이터 {}건 이미 존재 - API 수집 스킵", existingCount);
@@ -337,14 +345,13 @@ public class CrawlingService {
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd");
 
             for (JsonNode item : items) {
-                //최대 10개 저장
-                if (saved >= 30) break;
+                if (saved >= 2) break;
 
                 try {
                     String title = item.path("title").asText("").trim();
                     if (title.isBlank()) continue;
 
-                    // 공연/콘서트 제외 (전시회만)
+                    // 공연/콘서트 제외
                     if (title.contains("콘서트") || title.contains("공연") ||
                             title.contains("오케스트라") || title.contains("연주회") ||
                             title.contains("뮤지컬") || title.contains("축제") ||
@@ -363,6 +370,11 @@ public class CrawlingService {
                     LocalDate startDate = LocalDate.parse(dates[0].trim(), fmt);
                     LocalDate endDate   = LocalDate.parse(dates[1].trim(), fmt);
 
+                    if (!endDate.isAfter(LocalDate.now())) {
+                        log.info("종료된 전시 제외: {} ({})", title, endDate);
+                        continue;
+                    }
+
                     // 주소
                     String address = item.path("eventSite").asText("").trim();
                     if (address.isBlank()) address = "주소 미제공";
@@ -371,20 +383,18 @@ public class CrawlingService {
                     String description = item.path("description").asText("")
                             .replaceAll("<[^>]*>", "").trim();
 
-                    // "바로가기" 안내용 무의미한 설명 데이터 제외 필터링
                     if (description.contains("자세한 정보는 '바로가기' 링크를 통해 확인하시기 바랍니다.")) {
                         log.info("무의미한 설명 문구 제외: {}", title);
                         continue;
                     }
 
-                    // 1. 전시회 관련 핵심 단어가 제목에 포함되어 있는지 확인
+                    // 전시회 키워드 필터
                     boolean isRealExhibit = title.contains("전시") || title.contains("특별") ||
                             title.contains("기획") || title.contains("개인전") ||
                             title.contains("박람") || title.contains("미술") ||
                             title.contains("갤러리") || title.contains("아트") ||
                             title.contains("박물관") || title.contains("사진");
 
-                    // 2. 만약 위 단어가 하나도 안 들어있다면 전시회가 아니라고 판단하고 쳐내기
                     if (!isRealExhibit) {
                         log.info("전시회 아님 (제목 미달로 제외): {}", title);
                         continue;
@@ -398,14 +408,11 @@ public class CrawlingService {
                         price = digits.isBlank() ? 0 : Integer.parseInt(digits);
                     }
 
-// 💡 [수정] 7개는 무조건 0원(무료), 그 외 나머지는 랜덤 가격 적용
                     if (price == 0) {
                         if (saved < 7) {
-                            // 0번째부터 6번째까지 저장되는 총 7개의 전시회는 무료(0원)로 유지
                             price = 0;
                             log.info("무료 전시회로 지정 (7개 제한): {}", title);
                         } else {
-                            // 7번째 저장되는 데이터부터는 랜덤 유료 가격 적용
                             price = generateRandomPrice();
                             log.info("유료 전시회(랜덤 가격)로 지정: {} -> {}원", title, price);
                         }
@@ -415,21 +422,17 @@ public class CrawlingService {
                             .replaceAll(".*pSeq=", "");
                     if (spotRepository.existsBySourceId(sourceId)) continue;
 
+                    // ✅ 좌표 + 지역 한 번에 변환 (카카오 address_name 기반 지역)
+                    CoordResult coords = getCoordinates(address);
 
-                    // 💡 [여기서부터 추가됨] 주소를 들고 카카오 지오코딩 메서드를 찔러 좌표를 알아옵니다.
-                    double[] coords = getCoordinates(address);
-                    double latitude = coords[0];
-                    double longitude = coords[1];
-
-                    String area = fetchAreaByKeyword(address);
                     Spot spot = Spot.builder()
                             .title(title)
                             .description(description)
                             .spotType(Spot.SpotType.EXHIBIT)
-                            .area(area)
+                            .area(coords.area)         // ✅ 카카오 결과 기반 지역
                             .address(address)
-                            .latitude(latitude)    // ⭕ 계산된 진짜 위도 대입
-                            .longitude(longitude)  // ⭕ 계산된 진짜 경도 대입
+                            .latitude(coords.latitude)
+                            .longitude(coords.longitude)
                             .startDate(startDate)
                             .endDate(endDate)
                             .imageUrl(item.path("imageObject").asText(""))
@@ -453,7 +456,8 @@ public class CrawlingService {
         }
     }
 
-    // 항목별 개별 트랜잭션으로 저장
+    // ───────────── 공통 유틸 ─────────────
+
     @Transactional
     public void saveSpot(Spot spot) {
         spotRepository.save(spot);
@@ -473,23 +477,11 @@ public class CrawlingService {
         }
     }
 
-    private String extractArea(String address) {
-        if (address.contains("서울")) return "서울";
-        if (address.contains("경기")) return "경기";
-        if (address.contains("부산")) return "부산";
-        if (address.contains("대구")) return "대구";
-        if (address.contains("인천")) return "인천";
-        if (address.contains("광주")) return "광주";
-        if (address.contains("대전")) return "대전";
-        if (address.contains("울산")) return "울산";
-        if (address.contains("제주")) return "제주";
-        return "기타";
-    }
-
-    // 💡 10,000원 ~ 50,000원 사이의 천 원 단위 랜덤 가격 생성
+    /**
+     * 10,000원 ~ 50,000원 사이 천 원 단위 랜덤 가격 생성
+     */
     private int generateRandomPrice() {
-        // 10부터 50까지의 랜덤 정수 생성 (50을 포함하기 위해 bound를 51로 설정)
         int randomThousand = java.util.concurrent.ThreadLocalRandom.current().nextInt(10, 51);
-        return randomThousand * 1000; // 1,000을 곱해 만의 자리 ~ 천의 자리 숫자로 변환
+        return randomThousand * 1000;
     }
 }
