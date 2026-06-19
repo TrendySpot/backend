@@ -1,6 +1,7 @@
 package com.spotz.domain.spot;
 
 import com.spotz.global.response.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/spots")
+@SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor
 public class SpotController {
 

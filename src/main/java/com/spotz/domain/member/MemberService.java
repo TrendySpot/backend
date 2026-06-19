@@ -1,15 +1,13 @@
 package com.spotz.domain.member;
 
-import com.spotz.global.email.EmailService;
-import com.spotz.global.jwt.JwtProvider;
-// [작성, 06월 12일 10:16] 연관 데이터 수동 삭제 및 재고 복구를 위해 필요한 레포지토리 및 엔티티 임포트
+import com.spotz.domain.payment.PaymentRepository;
+import com.spotz.domain.review.ReviewRepository;
+import com.spotz.domain.spot.SpotSchedule;
 import com.spotz.domain.ticket.Ticket;
 import com.spotz.domain.ticket.TicketRepository;
-import com.spotz.domain.review.ReviewRepository;
 import com.spotz.domain.wishlist.WishlistRepository;
-import com.spotz.domain.payment.PaymentRepository;
-import com.spotz.domain.spot.SpotSchedule;
-
+import com.spotz.global.email.EmailService;
+import com.spotz.global.jwt.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -38,6 +36,7 @@ public class MemberService {
     private final WishlistRepository wishlistRepository;
     private final PaymentRepository paymentRepository;
 
+
     @Transactional
     public void register(RegisterRequest req) {
         String verified = redisTemplate.opsForValue().get("email:verified:" + req.getEmail());
@@ -62,7 +61,7 @@ public class MemberService {
         String refreshToken = jwtProvider.createRefreshToken(member.getMemberId());
         redisTemplate.opsForValue().set("refresh:" + member.getMemberId(), refreshToken, Duration.ofMillis(1209600000L));
         return new LoginResponse(accessToken, refreshToken, member.getNickname(), member.getRole().name(),
-                member.getMemberId(), member.getEmail(), member.getProvider());
+                member.getMemberId(), member.getEmail(),    member.getProvider());
     }
 
     public TokenRefreshResponse refresh(String refreshToken) {
@@ -152,23 +151,6 @@ public class MemberService {
         redisTemplate.delete("pw:verified:" + req.getEmail());
     }
 
-    public boolean checkNickname(String nickname) {
-        return !memberRepository.existsByNickname(nickname);
-    }
-
-    @Transactional
-    public void updateNickname(Long memberId, String nickname) {
-
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow();
-
-        if(memberRepository.existsByNickname(nickname)) {
-            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
-        }
-
-        member.setNickname(nickname);
-    }
-
     // [작성, 06월 12일 10:16] 명시적 자식 데이터 삭제 및 미래 일정 티켓 조건부 재고 복구 로직 구현
     @Transactional
     public void deleteMember(Long memberId) {
@@ -200,4 +182,24 @@ public class MemberService {
         // [작성, 06월 12일 10:16] 부모 테이블인 회원 데이터 최종 삭제
         memberRepository.delete(member);
     }
+
+    //닉네임 확인
+    public boolean checkNickname(String nickname) {
+        return !memberRepository.existsByNickname(nickname);
+    }
+
+    //닉네임 변경
+    @Transactional
+    public void updateNickname(Long memberId, String nickname) {
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow();
+
+        if(memberRepository.existsByNickname(nickname)) {
+            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
+        }
+
+        member.setNickname(nickname);
+    }
+
 }

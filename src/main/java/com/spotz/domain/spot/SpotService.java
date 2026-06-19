@@ -1,10 +1,9 @@
 package com.spotz.domain.spot;
 
-// [작성, 06월 12일 11:41] 완전 삭제(Hard Delete) 연쇄 처리에 필요한 연관 레포지토리 및 엔티티 임포트 유지
-import com.spotz.domain.ticket.Ticket;
-import com.spotz.domain.ticket.TicketRepository;
 import com.spotz.domain.payment.PaymentRepository;
 import com.spotz.domain.review.ReviewRepository;
+import com.spotz.domain.ticket.Ticket;
+import com.spotz.domain.ticket.TicketRepository;
 import com.spotz.domain.wishlist.WishlistRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -12,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service

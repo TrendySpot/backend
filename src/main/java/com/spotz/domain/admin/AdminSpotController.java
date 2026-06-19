@@ -2,6 +2,7 @@ package com.spotz.domain.admin;
 
 import com.spotz.domain.spot.*;
 import com.spotz.global.response.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +15,7 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/admin/spots")
+@SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor
 public class AdminSpotController {
 
@@ -21,6 +23,7 @@ public class AdminSpotController {
     private final SpotScheduleRepository scheduleRepository;
     // [작성, 06월 12일 10:47] 연쇄 삭제 비즈니스 로직 호출을 위해 SpotService 의존성 주입 추가
     private final SpotService spotService;
+
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<AdminSpotResponse>>> getSpots(
@@ -53,7 +56,7 @@ public class AdminSpotController {
 
     @PutMapping("/{spotId}")
     public ResponseEntity<ApiResponse<Void>> updateSpot(@PathVariable Long spotId,
-                                                        @RequestBody AdminSpotRequest req) {
+                                                         @RequestBody AdminSpotRequest req) {
         Spot spot = spotRepository.findById(spotId).orElseThrow();
         spot.setTitle(req.getTitle()); spot.setDescription(req.getDescription());
         spot.setArea(req.getArea()); spot.setAddress(req.getAddress());
