@@ -1,6 +1,7 @@
 package com.spotz.domain.wishlist;
 
 import com.spotz.global.response.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -10,6 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/wishlist")
+@SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor
 public class WishlistController {
 

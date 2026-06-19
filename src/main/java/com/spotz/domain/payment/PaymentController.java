@@ -1,5 +1,6 @@
 package com.spotz.domain.payment;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RestController
 @RequestMapping("/api/payments")
+@SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor
 public class PaymentController {
 
