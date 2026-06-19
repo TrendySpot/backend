@@ -85,7 +85,7 @@ public class AuthController {
     @GetMapping("/check-nickname")
     public ResponseEntity<ApiResponse<Boolean>> checkNickname(@RequestParam String nickname) {
         boolean exists = memberRepository.existsByNickname(nickname);
-        return ResponseEntity.ok(ApiResponse.of(exists)); // true면 중복, false면 사용 가능
+        return ResponseEntity.ok(ApiResponse.of(!exists)); // true면 중복, false면 사용 가능
     }
 
     //닉네임 변경
