@@ -12,7 +12,7 @@ public class PaymentResponse {
     private Long paymentId;
     private String portonePaymentId; // 엔티티 변경에 맞춰 필드명 수정
     private String merchantUid;
-    private Integer amount;
+    private Long amount;
     private String status;
     private String paidAt;
 

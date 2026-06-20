@@ -44,6 +44,11 @@ public class Member {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    // [작성 06월 10일 16:39] 비밀번호 재설정을 위해 엔티티 내부 password 필드를 안전하게 변경하는 메서드 추가
+    public void updatePassword(String newPassword) {
+        this.password = newPassword;
+    }
+
     public enum Role {
         ROLE_USER, ROLE_ADMIN
     }

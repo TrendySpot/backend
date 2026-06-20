@@ -10,7 +10,7 @@ public class PortOneService {
     private final RestClient restClient;
 
     // application.yml 또는 properties에 등록한 secret 키를 가져옵니다.
-    @Value("${portone.api.secret}")
+    @Value("${portone.api-secret}")
     private String apiSecret;
 
     public PortOneService() {
@@ -38,5 +38,5 @@ record PortOnePaymentResponse(
         Amount amount,
         String status
 ) {
-    record Amount(Integer total) {}
+    record Amount(Long total) {}
 }

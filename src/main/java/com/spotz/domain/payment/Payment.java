@@ -31,7 +31,7 @@ public class Payment {
     private String merchantUid;
 
     @Column(nullable = false)
-    private Integer amount;
+    private Long amount;
 
     // @Builder.Default 어노테이션을 붙여주어야 빌더 사용 시에도 "PAID"가 기본값으로 세팅됩니다.
     @Builder.Default

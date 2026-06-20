@@ -2,7 +2,12 @@ package com.spotz.domain.admin;
 
 import com.spotz.domain.spot.*;
 import com.spotz.global.response.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,11 +15,21 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/admin/spots")
+@SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor
 public class AdminSpotController {
 
     private final SpotRepository spotRepository;
     private final SpotScheduleRepository scheduleRepository;
+    // [작성, 06월 12일 10:47] 연쇄 삭제 비즈니스 로직 호출을 위해 SpotService 의존성 주입 추가
+    private final SpotService spotService;
+
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<Page<AdminSpotResponse>>> getSpots(
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.of(spotRepository.findAll(pageable).map(AdminSpotResponse::from)));
+    }
 
     @PostMapping
     public ResponseEntity<ApiResponse<Void>> createSpot(@RequestBody AdminSpotRequest req) {
@@ -55,7 +70,8 @@ public class AdminSpotController {
 
     @DeleteMapping("/{spotId}")
     public ResponseEntity<ApiResponse<Void>> deleteSpot(@PathVariable Long spotId) {
-        spotRepository.deleteById(spotId);
+        // [수정, 06월 12일 10:47] 기존 spotRepository.deleteById 방식 대신, 모든 연관 관계를 안전하게 지워주는 spotService 로직으로 변경
+        spotService.deleteSpot(spotId);
         return ResponseEntity.ok(ApiResponse.success("스팟이 삭제되었습니다."));
     }
 }
